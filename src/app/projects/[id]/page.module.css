@@ -1,0 +1,274 @@
+.main {
+  min-height: 100vh;
+}
+
+.loading {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-size: 14px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.nav {
+  display: flex;
+  gap: 24px;
+}
+
+.nav a {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.nav a:hover {
+  color: var(--text-primary);
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+.projectHeader {
+  margin-bottom: 48px;
+}
+
+.label {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.projectHeader h1 {
+  font-size: 32px;
+  font-weight: 400;
+  margin: 8px 0;
+}
+
+.director {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.director span {
+  color: var(--accent);
+}
+
+.description {
+  font-size: 16px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.timeline {
+  margin-bottom: 48px;
+}
+
+.timelineHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.timelineHeader h2 {
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.addBtn {
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  border: 1px dashed var(--border);
+}
+
+.scenes {
+  border-left: 2px solid var(--border);
+  padding-left: 24px;
+}
+
+.scene {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.scene::before {
+  content: '';
+  position: absolute;
+  left: -30px;
+  top: 28px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--success);
+}
+
+.sceneNumber {
+  font-size: 12px;
+  font-family: monospace;
+  color: var(--text-secondary);
+  padding-top: 2px;
+}
+
+.sceneContent {
+  flex: 1;
+}
+
+.sceneContent h3 {
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.sceneMedia {
+  margin-bottom: 12px;
+}
+
+.sceneMedia img,
+.sceneMedia video {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  background-color: var(--bg-primary);
+}
+
+.sceneContent p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.contributor {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.contributeBtn {
+  display: block;
+  margin-top: 24px;
+  padding: 16px;
+  text-align: center;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.contributeBtn:hover {
+  background-color: var(--bg-secondary);
+  opacity: 1;
+}
+
+.contributions {
+  padding-top: 48px;
+  border-top: 1px solid var(--border);
+}
+
+.contributions h2 {
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+
+.contribution {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  margin-bottom: 12px;
+}
+
+.contributionContent {
+  flex: 1;
+}
+
+.contributionContent h3 {
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+
+.contributionMedia {
+  margin-bottom: 12px;
+}
+
+.contributionMedia img,
+.contributionMedia video {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  background-color: var(--bg-primary);
+}
+
+.contributionContent p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.contributionActions {
+  display: flex;
+  gap: 8px;
+}
+
+.acceptBtn,
+.forkBtn {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: none;
+  cursor: pointer;
+}
+
+.acceptBtn {
+  background-color: var(--success);
+  color: var(--text-primary);
+}
+
+.forkBtn {
+  background-color: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.forkBtn:hover {
+  border-color: var(--text-secondary);
+}
