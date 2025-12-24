@@ -41,6 +41,14 @@ type Contribution = {
   };
 };
 
+type ForkOrigin = {
+  original_project_id: string;
+  projects: {
+    id: string;
+    title: string;
+  };
+};
+
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [scenes, setScenes] = useState<Scene[]>([]);
@@ -48,6 +56,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isDirector, setIsDirector] = useState(false);
+  const [forkedFrom, setForkedFrom] = useState<ForkOrigin | null>(null);
+  const [forkCount, setForkCount] = useState(0);
   const router = useRouter();
   const supabase = createClient();
 
@@ -88,13 +98,32 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       .eq('status', 'pending');
 
     setContributions(contributions || []);
+
+    // Check if this project is a fork of another project
+    const { data: forkData } = await supabase
+      .from('forks')
+      .select('original_project_id, projects!forks_original_project_id_fkey(id, title)')
+      .eq('new_project_id', params.id)
+      .single();
+
+    if (forkData) {
+      setForkedFrom(forkData as ForkOrigin);
+    }
+
+    // Count how many forks this project has
+    const { count } = await supabase
+      .from('forks')
+      .select('*', { count: 'exact', head: true })
+      .eq('original_project_id', params.id);
+
+    setForkCount(count || 0);
+
     setLoading(false);
   };
 
   const handleAccept = async (contribution: Contribution) => {
     const nextOrder = scenes.length + 1;
 
-    // Create scene from contribution
     await supabase.from('scenes').insert({
       project_id: params.id,
       title: contribution.title,
@@ -104,7 +133,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       contributor_id: contribution.contributor_id,
     });
 
-    // Update contribution status
     await supabase
       .from('contributions')
       .update({ status: 'accepted' })
@@ -114,7 +142,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   const handleFork = async (contribution: Contribution) => {
-    // Create new project from contribution
     const { data: newProject } = await supabase
       .from('projects')
       .insert({
@@ -126,7 +153,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       .single();
 
     if (newProject) {
-      // Copy existing scenes to new project
       for (const scene of scenes) {
         await supabase.from('scenes').insert({
           project_id: newProject.id,
@@ -138,7 +164,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         });
       }
 
-      // Add the contribution as new scene
       await supabase.from('scenes').insert({
         project_id: newProject.id,
         title: contribution.title,
@@ -148,7 +173,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         contributor_id: contribution.contributor_id,
       });
 
-      // Record the fork
       await supabase.from('forks').insert({
         original_project_id: params.id,
         forked_by: contribution.contributor_id,
@@ -156,7 +180,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         new_project_id: newProject.id,
       });
 
-      // Update contribution status
       await supabase
         .from('contributions')
         .update({ status: 'forked' })
@@ -197,6 +220,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           <p className={styles.director}>
             Directed by <span>@{project.profiles?.username}</span>
           </p>
+          {forkedFrom && (
+            <p className={styles.forkedFrom}>
+              Forked from{' '}
+              <Link href={`/projects/${forkedFrom.original_project_id}`}>
+                {forkedFrom.projects?.title}
+              </Link>
+            </p>
+          )}
+          {forkCount > 0 && (
+            <span className={styles.forkBadge}>
+              {forkCount} fork{forkCount !== 1 ? 's' : ''}
+            </span>
+          )}
           {project.description && (
             <p className={styles.description}>{project.description}</p>
           )}
