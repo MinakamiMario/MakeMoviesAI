@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MakeMovies — Finish films together</title>
+  <meta name="description" content="A collaborative filmmaking platform. One vision. Many hands. Nothing gets lost.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #111111;
+      --bg-tertiary: #1a1a1a;
+      --text-primary: #e8e8e8;
+      --text-secondary: #888888;
+      --accent: #c9a227;
+      --accent-hover: #d4af37;
+      --success: #2d5a3d;
+      --border: #333333;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 16px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: opacity 0.2s ease;
+    }
+
+    a:hover {
+      opacity: 0.8;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      font-size: 14px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 48px;
+    }
+
+    .tagline {
+      font-size: clamp(40px, 10vw, 72px);
+      font-weight: 300;
+      line-height: 1.05;
+      margin-bottom: 24px;
+    }
+
+    .tagline span {
+      color: var(--accent);
+    }
+
+    .subtitle {
+      font-size: 20px;
+      color: var(--text-secondary);
+      font-weight: 300;
+      margin-bottom: 48px;
+      max-width: 500px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-block;
+      padding: 16px 32px;
+      background-color: var(--accent);
+      color: var(--bg-primary);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+      opacity: 1;
+    }
+
+    .btn-secondary {
+      display: inline-block;
+      padding: 16px 32px;
+      background-color: transparent;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-secondary);
+      opacity: 1;
+    }
+
+    /* Preview Section */
+    .preview {
+      padding: 120px 24px;
+      background-color: var(--bg-secondary);
+    }
+
+    .preview-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .preview-label {
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .preview-title {
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 300;
+      margin-bottom: 64px;
+      max-width: 600px;
+    }
+
+    /* App Mockup */
+    .mockup {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .mockup-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mockup-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--border);
+    }
+
+    .mockup-dot:first-child { background-color: #5a2d2d; }
+    .mockup-dot:nth-child(2) { background-color: #5a4a2d; }
+    .mockup-dot:nth-child(3) { background-color: var(--success); }
+
+    .mockup-content {
+      padding: 32px 24px;
+    }
+
+    .mockup-project {
+      margin-bottom: 32px;
+    }
+
+    .mockup-project-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .mockup-project-title {
+      font-size: 24px;
+      font-weight: 400;
+      margin-bottom: 4px;
+    }
+
+    .mockup-project-meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .mockup-project-meta span {
+      color: var(--accent);
+    }
+
+    /* Timeline */
+    .timeline {
+      padding-left: 24px;
+      border-left: 2px solid var(--border);
+    }
+
+    .scene {
+      position: relative;
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .scene::before {
+      content: '';
+      position: absolute;
+      left: -30px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--success);
+    }
+
+    .scene.pending::before {
+      background-color: var(--accent);
+    }
+
+    .scene.branch {
+      margin-left: 48px;
+      border-style: dashed;
+      background-color: transparent;
+    }
+
+    .scene.branch::before {
+      display: none;
+    }
+
+    .scene-num {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: monospace;
+    }
+
+    .scene-title {
+      flex: 1;
+      font-size: 15px;
+    }
+
+    .scene-status {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .scene-status.accepted {
+      color: var(--success);
+    }
+
+    .scene-status.pending {
+      color: var(--accent);
+    }
+
+    .branch-line {
+      width: 48px;
+      height: 2px;
+      background-color: var(--border);
+      margin-left: -24px;
+      margin-bottom: 12px;
+    }
+
+    .branch-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-left: 48px;
+      margin-bottom: 8px;
+      font-style: italic;
+    }
+
+    /* Concept Section */
+    .concept {
+      padding: 120px 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .concept-label {
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .concept-title {
+      font-size: clamp(28px, 5vw, 40px);
+      font-weight: 300;
+      margin-bottom: 48px;
+    }
+
+    .concept-grid {
+      display: grid;
+      gap: 48px;
+    }
+
+    .concept-item {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 24px;
+    }
+
+    .concept-num {
+      font-size: 32px;
+      font-weight: 300;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .concept-text h3 {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .concept-text p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      font-weight: 300;
+    }
+
+    /* CTA Section */
+    .cta {
+      padding: 120px 24px;
+      background-color: var(--bg-secondary);
+      text-align: center;
+    }
+
+    .cta-title {
+      font-size: clamp(32px, 6vw, 48px);
+      font-weight: 300;
+      margin-bottom: 32px;
+    }
+
+    /* Footer */
+    footer {
+      padding: 48px 24px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-size: 14px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .copyright {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 600px) {
+      .hero {
+        padding: 60px 24px;
+      }
+
+      .preview, .concept, .cta {
+        padding: 80px 24px;
+      }
+
+      .concept-item {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .concept-num {
+        font-size: 24px;
+      }
+
+      .mockup-content {
+        padding: 24px 16px;
+      }
+
+      .scene {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <section class="hero">
+    <p class="logo">MakeMovies</p>
+    <h1 class="tagline">Finish films<br><span>together.</span></h1>
+    <p class="subtitle">One vision. Many hands. Nothing gets lost.</p>
+    <div class="actions">
+      <a href="https://app.makemoviesai.com" class="btn-primary">Open the app</a>
+      <a href="#how-it-works" class="btn-secondary">See how it works</a>
+    </div>
+  </section>
+
+  <section class="preview">
+    <div class="preview-container">
+      <p class="preview-label">The platform</p>
+      <h2 class="preview-title">A new way to make films — where rejected ideas become new projects.</h2>
+
+      <div class="mockup">
+        <div class="mockup-header">
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+          <div class="mockup-dot"></div>
+        </div>
+        <div class="mockup-content">
+          <div class="mockup-project">
+            <p class="mockup-project-label">Project</p>
+            <h3 class="mockup-project-title">The Last Signal</h3>
+            <p class="mockup-project-meta">Directed by <span>@maria</span></p>
+          </div>
+
+          <div class="timeline">
+            <div class="scene">
+              <span class="scene-num">01</span>
+              <span class="scene-title">Opening — Ship interior</span>
+              <span class="scene-status accepted">✓ Accepted</span>
+            </div>
+            <div class="scene">
+              <span class="scene-num">02</span>
+              <span class="scene-title">The signal arrives</span>
+              <span class="scene-status accepted">✓ Accepted</span>
+            </div>
+            <div class="scene pending">
+              <span class="scene-num">03</span>
+              <span class="scene-title">Decoding the message</span>
+              <span class="scene-status pending">⏳ Pending</span>
+            </div>
+
+            <div class="branch-line"></div>
+            <p class="branch-label">Branched into new project by @jonas</p>
+            <div class="scene branch">
+              <span class="scene-num">03b</span>
+              <span class="scene-title">Message is a warning</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="concept" id="how-it-works">
+    <p class="concept-label">How it works</p>
+    <h2 class="concept-title">No rejection. Just branching.</h2>
+
+    <div class="concept-grid">
+      <div class="concept-item">
+        <span class="concept-num">1</span>
+        <div class="concept-text">
+          <h3>Start with a vision</h3>
+          <p>A director creates a project and sets the creative direction. They control what fits their story.</p>
+        </div>
+      </div>
+
+      <div class="concept-item">
+        <span class="concept-num">2</span>
+        <div class="concept-text">
+          <h3>Contributors add scenes</h3>
+          <p>Anyone can contribute scenes, ideas, and variations. Upload scripts, storyboards, or footage.</p>
+        </div>
+      </div>
+
+      <div class="concept-item">
+        <span class="concept-num">3</span>
+        <div class="concept-text">
+          <h3>Nothing gets lost</h3>
+          <p>Contributions that don't fit the main vision branch off into new projects — led by their creators.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2 class="cta-title">Ready to start?</h2>
+    <a href="https://app.makemoviesai.com" class="btn-primary">Open the app</a>
+  </section>
+
+  <footer>
+    <p class="footer-logo">MakeMovies</p>
+    <p class="copyright">© 2025 MakeMovies</p>
+  </footer>
+
+</body>
+</html>
