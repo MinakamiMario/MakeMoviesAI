@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo — MakeMovies</title>
+  <meta name="description" content="See how a MakeMovies project could look. A visual concept of collaborative filmmaking with branches.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="page-header">
+    <div class="container">
+      <a href="index.html" class="logo">MakeMovies</a>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="container">
+      <h1 class="page-title">Demo</h1>
+      <p class="page-intro">A glimpse of how it could work.</p>
+    </div>
+  </section>
+
+  <section class="demo-section">
+    <div class="container">
+      <p class="demo-note">See the concept below, then try the real app.</p>
+    </div>
+  </section>
+
+  <section class="demo-visual">
+    <div class="container">
+      <div class="project-card">
+        <div class="project-header">
+          <span class="project-label">Project</span>
+          <h2 class="project-title">The Last Signal</h2>
+          <p class="project-director">Directed by <span>@maria</span></p>
+        </div>
+        <p class="project-description">A sci-fi short about an astronaut receiving a mysterious transmission from Earth — 50 years after humanity went silent.</p>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-label">Main timeline</div>
+
+        <div class="scene-row">
+          <div class="scene accepted">
+            <span class="scene-number">01</span>
+            <span class="scene-title">Opening — Ship interior</span>
+            <span class="scene-status">✓ Accepted</span>
+          </div>
+        </div>
+
+        <div class="scene-row">
+          <div class="scene accepted">
+            <span class="scene-number">02</span>
+            <span class="scene-title">The signal arrives</span>
+            <span class="scene-status">✓ Accepted</span>
+          </div>
+        </div>
+
+        <div class="scene-row has-branch">
+          <div class="scene accepted">
+            <span class="scene-number">03</span>
+            <span class="scene-title">Decoding the message</span>
+            <span class="scene-status">✓ Accepted</span>
+          </div>
+          <div class="branch">
+            <div class="branch-line"></div>
+            <div class="scene branched">
+              <span class="scene-number">03b</span>
+              <span class="scene-title">Message is a warning</span>
+              <span class="scene-meta">by @jonas — branched into new project</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scene-row">
+          <div class="scene pending">
+            <span class="scene-number">04</span>
+            <span class="scene-title">Response from Earth?</span>
+            <span class="scene-status">⏳ Pending review</span>
+          </div>
+        </div>
+
+        <div class="scene-row">
+          <div class="scene open">
+            <span class="scene-number">05</span>
+            <span class="scene-title">Open for contribution</span>
+            <span class="scene-status">+ Add your scene</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo-section">
+    <div class="container">
+      <div class="demo-explanation">
+        <h3>What you're seeing</h3>
+        <p>A director started this project with a vision. Contributors added scenes. One scene didn't fit the main story — but instead of disappearing, it branched off into a new direction that another creator can now lead.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-cta">
+    <div class="container">
+      <h2>Want to try this?</h2>
+      <a href="https://app.makemoviesai.com" class="demo-btn">Open the app</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="how-it-works.html">How it works</a>
+        <a href="about.html">About</a>
+      </nav>
+      <p class="copyright">© 2025 MakeMovies</p>
+    </div>
+  </footer>
+
+</body>
+</html>
