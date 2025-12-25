@@ -46,7 +46,7 @@ type ForkOrigin = {
   projects: {
     id: string;
     title: string;
-  };
+  }[];
 };
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
@@ -68,56 +68,57 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const loadProject = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
-
+  
     const { data: project } = await supabase
       .from('projects')
       .select('*, profiles(username)')
       .eq('id', params.id)
       .single();
-
+  
     if (!project) {
       router.push('/projects');
       return;
     }
-
+  
     setProject(project);
     setIsDirector(user?.id === project.director_id);
-
+  
     const { data: scenes } = await supabase
       .from('scenes')
       .select('*, profiles(username)')
       .eq('project_id', params.id)
       .order('scene_order', { ascending: true });
-
+  
     setScenes(scenes || []);
-
+  
     const { data: contributions } = await supabase
       .from('contributions')
       .select('*, profiles(username)')
       .eq('project_id', params.id)
       .eq('status', 'pending');
-
+  
     setContributions(contributions || []);
-
-    // Check if this project is a fork of another project
+  
     const { data: forkData } = await supabase
       .from('forks')
       .select('original_project_id, projects!forks_original_project_id_fkey(id, title)')
       .eq('new_project_id', params.id)
       .single();
-
-    if (forkData) {
-      setForkedFrom(forkData as ForkOrigin);
+  
+    if (forkData?.projects && Array.isArray(forkData.projects) && forkData.projects.length > 0) {
+      setForkedFrom({
+        original_project_id: forkData.original_project_id,
+        projects: forkData.projects,
+      });
     }
-
-    // Count how many forks this project has
+  
     const { count } = await supabase
       .from('forks')
       .select('*', { count: 'exact', head: true })
       .eq('original_project_id', params.id);
-
+  
     setForkCount(count || 0);
-
+  
     setLoading(false);
   };
 
@@ -224,7 +225,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             <p className={styles.forkedFrom}>
               Forked from{' '}
               <Link href={`/projects/${forkedFrom.original_project_id}`}>
-                {forkedFrom.projects?.title}
+                {forkedFrom.projects?.[0]?.title}
               </Link>
             </p>
           )}
