@@ -26,7 +26,6 @@ export default function AddScene({ params }: { params: { id: string } }) {
         return;
       }
 
-      // Check if user is director
       const { data: project } = await supabase
         .from('projects')
         .select('director_id')
@@ -38,7 +37,6 @@ export default function AddScene({ params }: { params: { id: string } }) {
         return;
       }
 
-      // Get scene count
       const { count } = await supabase
         .from('scenes')
         .select('*', { count: 'exact', head: true })
@@ -95,7 +93,7 @@ export default function AddScene({ params }: { params: { id: string } }) {
 
           <div className={styles.field}>
             <label>Media</label>
-            <MediaUpload onUpload={setMediaUrl} />
+            <MediaUpload projectId={params.id} onUpload={(url) => setMediaUrl(url)} />
           </div>
 
           <div className={styles.field}>

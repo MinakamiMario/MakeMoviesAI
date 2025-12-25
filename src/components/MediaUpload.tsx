@@ -5,13 +5,15 @@ import { createClient } from '@/lib/supabase/client';
 import styles from './MediaUpload.module.css';
 
 type Props = {
-  onUpload: (url: string) => void;
+  projectId: string;
+  onUpload: (url: string, assetId?: string) => void;
   currentUrl?: string;
 };
 
-export default function MediaUpload({ onUpload, currentUrl }: Props) {
+export default function MediaUpload({ projectId, onUpload, currentUrl }: Props) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(currentUrl || null);
+  const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,26 +21,51 @@ export default function MediaUpload({ onUpload, currentUrl }: Props) {
     if (!file) return;
 
     setUploading(true);
+    setError(null);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError('You must be logged in to upload');
+      setUploading(false);
+      return;
+    }
 
     const fileExt = file.name.split('.').pop();
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const storagePath = `${projectId}/${fileName}`;
 
-    const { error } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('media')
-      .upload(fileName, file);
+      .upload(storagePath, file);
 
-    if (error) {
-      console.error('Upload error:', error);
+    if (uploadError) {
+      setError(uploadError.message);
       setUploading(false);
       return;
     }
 
     const { data: { publicUrl } } = supabase.storage
       .from('media')
-      .getPublicUrl(fileName);
+      .getPublicUrl(storagePath);
+
+    const { data: asset, error: assetError } = await supabase
+      .from('media_assets')
+      .insert({
+        project_id: projectId,
+        storage_path: storagePath,
+        file_type: file.type,
+        file_size: file.size,
+        uploaded_by: user.id,
+      })
+      .select('id')
+      .single();
+
+    if (assetError) {
+      console.error('Failed to register asset:', assetError);
+    }
 
     setPreview(publicUrl);
-    onUpload(publicUrl);
+    onUpload(publicUrl, asset?.id);
     setUploading(false);
   };
 
@@ -46,6 +73,7 @@ export default function MediaUpload({ onUpload, currentUrl }: Props) {
 
   return (
     <div className={styles.container}>
+      {error && <p className={styles.error}>{error}</p>}
       {preview ? (
         <div className={styles.preview}>
           {isVideo ? (

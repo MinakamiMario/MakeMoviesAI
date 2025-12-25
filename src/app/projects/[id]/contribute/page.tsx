@@ -37,7 +37,6 @@ export default function Contribute({ params }: { params: { id: string } }) {
         return;
       }
 
-      // Directors should add scenes, not contribute
       if (project.director_id === user.id) {
         router.push(`/projects/${params.id}/add-scene`);
         return;
@@ -94,7 +93,7 @@ export default function Contribute({ params }: { params: { id: string } }) {
 
           <div className={styles.field}>
             <label>Media</label>
-            <MediaUpload onUpload={setMediaUrl} />
+            <MediaUpload projectId={params.id} onUpload={(url) => setMediaUrl(url)} />
           </div>
 
           <div className={styles.field}>
