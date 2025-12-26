@@ -68,76 +68,86 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const loadProject = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
-  
+
     const { data: project } = await supabase
       .from('projects')
       .select('*, profiles(username)')
       .eq('id', params.id)
       .single();
-  
+
     if (!project) {
       router.push('/projects');
       return;
     }
-  
+
     setProject(project);
     setIsDirector(user?.id === project.director_id);
-  
+
     const { data: scenes } = await supabase
       .from('scenes')
       .select('*, profiles(username)')
       .eq('project_id', params.id)
       .order('scene_order', { ascending: true });
-  
+
     setScenes(scenes || []);
-  
+
     const { data: contributions } = await supabase
       .from('contributions')
       .select('*, profiles(username)')
       .eq('project_id', params.id)
       .eq('status', 'pending');
-  
+
     setContributions(contributions || []);
-  
+
     const { data: forkData } = await supabase
       .from('forks')
       .select('original_project_id, projects!forks_original_project_id_fkey(id, title)')
       .eq('new_project_id', params.id)
       .single();
-  
+
     if (forkData?.projects && Array.isArray(forkData.projects) && forkData.projects.length > 0) {
       setForkedFrom({
         original_project_id: forkData.original_project_id,
         projects: forkData.projects,
       });
     }
-  
+
     const { count } = await supabase
       .from('forks')
       .select('*', { count: 'exact', head: true })
       .eq('original_project_id', params.id);
-  
+
     setForkCount(count || 0);
-  
+
     setLoading(false);
   };
 
   const handleAccept = async (contribution: Contribution) => {
     const nextOrder = scenes.length + 1;
 
-    await supabase.from('scenes').insert({
+    const { data: newScene } = await supabase.from('scenes').insert({
       project_id: params.id,
       title: contribution.title,
       description: contribution.description,
       media_url: contribution.media_url,
       scene_order: nextOrder,
       contributor_id: contribution.contributor_id,
-    });
+    }).select().single();
 
     await supabase
       .from('contributions')
       .update({ status: 'accepted' })
       .eq('id', contribution.id);
+
+    if (newScene && user) {
+      await supabase.from('decision_events').insert({
+        project_id: params.id,
+        actor_id: user.id,
+        event_type: 'accept_contribution',
+        contribution_id: contribution.id,
+        result_scene_id: newScene.id,
+      });
+    }
 
     loadProject();
   };
@@ -185,6 +195,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         .from('contributions')
         .update({ status: 'forked' })
         .eq('id', contribution.id);
+
+      if (user) {
+        await supabase.from('decision_events').insert({
+          project_id: params.id,
+          actor_id: user.id,
+          event_type: 'fork_contribution',
+          contribution_id: contribution.id,
+          result_new_project_id: newProject.id,
+        });
+      }
     }
 
     loadProject();
