@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
 import DecisionLog from '@/components/DecisionLog';
+import LineageTree from '@/components/LineageTree';
 
 type Project = {
   id: string;
@@ -352,6 +353,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           </div>
         )}
 
+        <LineageTree projectId={params.id} projectTitle={project.title} />
         <DecisionLog projectId={params.id} />
       </div>
     </main>
