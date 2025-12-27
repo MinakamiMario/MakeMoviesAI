@@ -224,67 +224,8 @@
   margin-bottom: 1.5rem;
 }
 
-.contribution {
-  background: #111;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.contributionContent h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.contributionContent p {
-  color: #888;
-  font-size: 0.9rem;
-}
-
-.contributionMedia {
-  margin-bottom: 1rem;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.contributionMedia img,
-.contributionMedia video {
-  width: 100%;
-  max-height: 200px;
-  object-fit: cover;
-}
-
-.contributionActions {
+.contributionsList {
   display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.acceptBtn {
-  background: #22c55e;
-  color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.acceptBtn:hover {
-  background: #16a34a;
-}
-
-.forkBtn {
-  background: #333;
-  color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.forkBtn:hover {
-  background: #444;
 }

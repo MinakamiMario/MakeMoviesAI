@@ -7,6 +7,8 @@ import Link from 'next/link';
 import styles from './page.module.css';
 import DecisionLog from '@/components/DecisionLog';
 import LineageTree from '@/components/LineageTree';
+import ContributionCard, { ContributionData } from '@/components/ContributionCard';
+import ContributionReview, { SceneData } from '@/components/ContributionReview';
 
 type Project = {
   id: string;
@@ -30,19 +32,6 @@ type Scene = {
   } | null;
 };
 
-type Contribution = {
-  id: string;
-  title: string;
-  description: string;
-  media_url: string | null;
-  status: string;
-  contributor_id: string;
-  parent_scene_id: string | null;
-  profiles: {
-    username: string;
-  };
-};
-
 type ForkOrigin = {
   original_project_id: string;
   projects: {
@@ -54,12 +43,13 @@ type ForkOrigin = {
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [scenes, setScenes] = useState<Scene[]>([]);
-  const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [contributions, setContributions] = useState<ContributionData[]>([]);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isDirector, setIsDirector] = useState(false);
   const [forkedFrom, setForkedFrom] = useState<ForkOrigin | null>(null);
   const [forkCount, setForkCount] = useState(0);
+  const [selectedContribution, setSelectedContribution] = useState<ContributionData | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -83,7 +73,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }
 
     setProject(project);
-    setIsDirector(user?.id === project.director_id);
+    const userIsDirector = user?.id === project.director_id;
+    setIsDirector(userIsDirector);
 
     const { data: scenes } = await supabase
       .from('scenes')
@@ -93,13 +84,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
     setScenes(scenes || []);
 
-    const { data: contributions } = await supabase
+    // Directors see all pending, contributors see only their own pending
+    let contributionsQuery = supabase
       .from('contributions')
       .select('*, profiles(username)')
       .eq('project_id', params.id)
       .eq('status', 'pending');
 
-    setContributions(contributions || []);
+    if (!userIsDirector && user) {
+      contributionsQuery = contributionsQuery.eq('contributor_id', user.id);
+    }
+
+    const { data: contributionsData } = await contributionsQuery;
+    setContributions((contributionsData as ContributionData[]) || []);
 
     const { data: forkData } = await supabase
       .from('forks')
@@ -120,11 +117,32 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       .eq('original_project_id', params.id);
 
     setForkCount(count || 0);
-
     setLoading(false);
   };
 
-  const handleAccept = async (contribution: Contribution) => {
+  const findParentScene = (parentSceneId: string | null): SceneData | null => {
+    if (!parentSceneId) return null;
+    const scene = scenes.find(s => s.id === parentSceneId);
+    if (!scene) return null;
+    return {
+      id: scene.id,
+      title: scene.title,
+      description: scene.description,
+      media_url: scene.media_url,
+      scene_order: scene.scene_order,
+      profiles: scene.profiles,
+    };
+  };
+
+  const handleSelectContribution = (contribution: ContributionData) => {
+    setSelectedContribution(contribution);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedContribution(null);
+  };
+
+  const handleAccept = async (contribution: ContributionData) => {
     const nextOrder = scenes.length + 1;
 
     const { data: newScene } = await supabase.from('scenes').insert({
@@ -151,10 +169,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       });
     }
 
+    setSelectedContribution(null);
     loadProject();
   };
 
-  const handleFork = async (contribution: Contribution) => {
+  const handleFork = async (contribution: ContributionData) => {
     const { data: newProject } = await supabase
       .from('projects')
       .insert({
@@ -209,6 +228,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       }
     }
 
+    setSelectedContribution(null);
     loadProject();
   };
 
@@ -313,49 +333,38 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           )}
         </div>
 
-        {isDirector && contributions.length > 0 && (
+        {contributions.length > 0 && (
           <div className={styles.contributions}>
-            <h2>Pending contributions</h2>
-            {contributions.map((contribution) => (
-              <div key={contribution.id} className={styles.contribution}>
-                <div className={styles.contributionContent}>
-                  {contribution.media_url && (
-                    <div className={styles.contributionMedia}>
-                      {contribution.media_url.match(/\.(mp4|webm|mov)$/i) ? (
-                        <video src={contribution.media_url} controls />
-                      ) : (
-                        <img src={contribution.media_url} alt={contribution.title} />
-                      )}
-                    </div>
-                  )}
-                  <h3>{contribution.title}</h3>
-                  {contribution.description && <p>{contribution.description}</p>}
-                  <span className={styles.contributor}>
-                    by @{contribution.profiles?.username}
-                  </span>
-                </div>
-                <div className={styles.contributionActions}>
-                  <button
-                    onClick={() => handleAccept(contribution)}
-                    className={styles.acceptBtn}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleFork(contribution)}
-                    className={styles.forkBtn}
-                  >
-                    Fork
-                  </button>
-                </div>
-              </div>
-            ))}
+            <h2>
+              {isDirector ? 'Pending Contributions' : 'Your Submissions'}
+            </h2>
+            <div className={styles.contributionsList}>
+              {contributions.map((contribution) => (
+                <ContributionCard
+                  key={contribution.id}
+                  contribution={contribution}
+                  onSelect={handleSelectContribution}
+                  isOwnSubmission={contribution.contributor_id === user?.id}
+                />
+              ))}
+            </div>
           </div>
         )}
 
         <LineageTree projectId={params.id} projectTitle={project.title} />
         <DecisionLog projectId={params.id} />
       </div>
+
+      {selectedContribution && (
+        <ContributionReview
+          contribution={selectedContribution}
+          parentScene={findParentScene(selectedContribution.parent_scene_id)}
+          onAccept={() => handleAccept(selectedContribution)}
+          onFork={() => handleFork(selectedContribution)}
+          onClose={handleCloseModal}
+          isDirector={isDirector}
+        />
+      )}
     </main>
   );
 }
