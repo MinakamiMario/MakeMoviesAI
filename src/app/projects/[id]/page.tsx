@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
+import DecisionLog from '@/components/DecisionLog';
 
 type Project = {
   id: string;
@@ -350,6 +351,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             ))}
           </div>
         )}
+
+        <DecisionLog projectId={params.id} />
       </div>
     </main>
   );

@@ -1,0 +1,77 @@
+.container {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #1a1a1a;
+  border-radius: 8px;
+}
+
+.container h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.event {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 0.9rem;
+}
+
+.event:last-child {
+  border-bottom: none;
+}
+
+.timestamp {
+  color: #666;
+  font-size: 0.8rem;
+  min-width: 100px;
+}
+
+.badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.accept_contribution {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+.fork_contribution {
+  background: #1e3a5f;
+  color: #7dd3fc;
+}
+
+.description {
+  color: #ccc;
+}
+
+.description strong {
+  color: #fff;
+}
+
+.description a {
+  color: #7dd3fc;
+  text-decoration: none;
+}
+
+.description a:hover {
+  text-decoration: underline;
+}
+
+.loading {
+  color: #666;
+  font-size: 0.9rem;
+}
