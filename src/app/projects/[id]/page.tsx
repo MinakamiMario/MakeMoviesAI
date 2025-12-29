@@ -69,7 +69,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     // Load project with fork info
     const { data: project } = await supabase
       .from('projects')
-      .select('*, profiles(username)')
+      .select('*, profiles!director_id(username)')
       .eq('id', params.id)
       .single();
 
@@ -107,7 +107,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       if (orderedSceneIds.length > 0) {
         const { data: scenesData } = await supabase
           .from('scenes')
-          .select('*, profiles(username)')
+          .select('*, profiles!contributor_id(username)')
           .in('id', orderedSceneIds);
 
         // Sort scenes by edge order
@@ -125,7 +125,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     // Load contributions
     let contributionsQuery = supabase
       .from('contributions')
-      .select('*, profiles(username)')
+      .select('*, profiles!contributor_id(username)')
       .eq('project_id', params.id)
       .eq('status', 'pending');
 
