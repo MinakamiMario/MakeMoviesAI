@@ -55,7 +55,7 @@ export default function LineageTree({ projectId, projectTitle }: Props) {
     // Get all projects forked from this one
     const { data: forksData } = await supabase
       .from('projects')
-      .select('id, title, created_at, profiles(username)')
+      .select('id, title, created_at, profiles!forked_by(username)')
       .eq('forked_from_project_id', projectId)
       .order('created_at', { ascending: true });
 

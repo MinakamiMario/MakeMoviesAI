@@ -28,7 +28,7 @@ export default function Projects() {
 
       const { data: projects } = await supabase
         .from('projects')
-        .select('*, profiles(username)')
+        .select('*, profiles!director_id(username)')
         .order('created_at', { ascending: false });
 
       setProjects(projects || []);
