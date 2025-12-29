@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createDefaultBranch, createDefaultCut } from '@/lib/graph';
 import styles from './page.module.css';
 
 export default function NewProject() {
@@ -37,7 +38,8 @@ export default function NewProject() {
       return;
     }
 
-    const { data, error } = await supabase
+    // Create project
+    const { data: project, error: projectError } = await supabase
       .from('projects')
       .insert({
         title,
@@ -47,12 +49,24 @@ export default function NewProject() {
       .select()
       .single();
 
-    if (error) {
-      setError(error.message);
+    if (projectError || !project) {
+      setError(projectError?.message || 'Failed to create project');
       setLoading(false);
-    } else {
-      router.push(`/projects/${data.id}`);
+      return;
     }
+
+    // Create default branch
+    const branch = await createDefaultBranch(supabase, project.id, user.id);
+    if (!branch) {
+      setError('Failed to create project branch');
+      setLoading(false);
+      return;
+    }
+
+    // Create default cut
+    await createDefaultCut(supabase, project.id, user.id);
+
+    router.push(`/projects/${project.id}`);
   };
 
   return (

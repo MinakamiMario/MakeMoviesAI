@@ -5,6 +5,13 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaUpload from '@/components/MediaUpload';
+import {
+  getDefaultBranch,
+  getBranchEdges,
+  findLastSceneId,
+  createEdge,
+  BranchData,
+} from '@/lib/graph';
 import styles from './page.module.css';
 
 export default function AddScene({ params }: { params: { id: string } }) {
@@ -14,6 +21,8 @@ export default function AddScene({ params }: { params: { id: string } }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [sceneCount, setSceneCount] = useState(0);
+  const [branch, setBranch] = useState<BranchData | null>(null);
+  const [lastSceneId, setLastSceneId] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -37,12 +46,14 @@ export default function AddScene({ params }: { params: { id: string } }) {
         return;
       }
 
-      const { count } = await supabase
-        .from('scenes')
-        .select('*', { count: 'exact', head: true })
-        .eq('project_id', params.id);
-
-      setSceneCount(count || 0);
+      // Get default branch and edges
+      const defaultBranch = await getDefaultBranch(supabase, params.id);
+      if (defaultBranch) {
+        setBranch(defaultBranch);
+        const edges = await getBranchEdges(supabase, defaultBranch.id);
+        setSceneCount(edges.length);
+        setLastSceneId(findLastSceneId(edges));
+      }
     };
 
     checkAuth();
@@ -61,21 +72,49 @@ export default function AddScene({ params }: { params: { id: string } }) {
       return;
     }
 
-    const { error } = await supabase.from('scenes').insert({
-      project_id: params.id,
-      title,
-      description,
-      media_url: mediaUrl || null,
-      scene_order: sceneCount + 1,
-      contributor_id: user.id,
-    });
-
-    if (error) {
-      setError(error.message);
+    if (!branch) {
+      setError('No branch found for this project');
       setLoading(false);
-    } else {
-      router.push(`/projects/${params.id}`);
+      return;
     }
+
+    // Create scene
+    const { data: newScene, error: sceneError } = await supabase
+      .from('scenes')
+      .insert({
+        project_id: params.id,
+        title,
+        description,
+        media_url: mediaUrl || null,
+        scene_order: sceneCount + 1,
+        contributor_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (sceneError || !newScene) {
+      setError(sceneError?.message || 'Failed to create scene');
+      setLoading(false);
+      return;
+    }
+
+    // Create edge from last scene (or null) to new scene
+    const edgeResult = await createEdge(
+      supabase,
+      params.id,
+      branch.id,
+      lastSceneId,
+      newScene.id,
+      user.id
+    );
+
+    if (!edgeResult.success) {
+      setError(edgeResult.error || 'Failed to create edge');
+      setLoading(false);
+      return;
+    }
+
+    router.push(`/projects/${params.id}`);
   };
 
   return (

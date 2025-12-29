@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaUpload from '@/components/MediaUpload';
+import { getDefaultBranch, getBranchEdges, findLastSceneId } from '@/lib/graph';
 import styles from '../add-scene/page.module.css';
 
 export default function Contribute({ params }: { params: { id: string } }) {
@@ -14,6 +15,7 @@ export default function Contribute({ params }: { params: { id: string } }) {
   const [projectTitle, setProjectTitle] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [parentSceneId, setParentSceneId] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -43,6 +45,13 @@ export default function Contribute({ params }: { params: { id: string } }) {
       }
 
       setProjectTitle(project.title);
+
+      // Get default branch and find last scene for parent_scene_id
+      const defaultBranch = await getDefaultBranch(supabase, params.id);
+      if (defaultBranch) {
+        const edges = await getBranchEdges(supabase, defaultBranch.id);
+        setParentSceneId(findLastSceneId(edges));
+      }
     };
 
     checkAuth();
@@ -67,6 +76,7 @@ export default function Contribute({ params }: { params: { id: string } }) {
       description,
       media_url: mediaUrl || null,
       contributor_id: user.id,
+      parent_scene_id: parentSceneId,
       status: 'pending',
     });
 

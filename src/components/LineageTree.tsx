@@ -7,15 +7,14 @@ import styles from './LineageTree.module.css';
 
 type ForkInfo = {
   id: string;
-  new_project_id: string;
+  title: string;
   created_at: string;
-  projects: { title: string }[];
-  profiles: { username: string }[];
+  profiles: { username: string };
 };
 
 type ParentInfo = {
-  original_project_id: string;
-  projects: { title: string }[];
+  id: string;
+  title: string;
 };
 
 type Props = {
@@ -34,26 +33,30 @@ export default function LineageTree({ projectId, projectTitle }: Props) {
   }, [projectId]);
 
   const loadLineage = async () => {
-    const { data: parentData } = await supabase
-      .from('forks')
-      .select('original_project_id, projects!forks_original_project_id_fkey(title)')
-      .eq('new_project_id', projectId)
+    // Get parent project (if this project was forked)
+    const { data: currentProject } = await supabase
+      .from('projects')
+      .select('forked_from_project_id')
+      .eq('id', projectId)
       .single();
 
-    if (parentData?.projects) {
-      setParent(parentData as unknown as ParentInfo);
+    if (currentProject?.forked_from_project_id) {
+      const { data: parentProject } = await supabase
+        .from('projects')
+        .select('id, title')
+        .eq('id', currentProject.forked_from_project_id)
+        .single();
+
+      if (parentProject) {
+        setParent(parentProject);
+      }
     }
 
+    // Get all projects forked from this one
     const { data: forksData } = await supabase
-      .from('forks')
-      .select(`
-        id,
-        new_project_id,
-        created_at,
-        projects!forks_new_project_id_fkey(title),
-        profiles!forks_forked_by_fkey(username)
-      `)
-      .eq('original_project_id', projectId)
+      .from('projects')
+      .select('id, title, created_at, profiles(username)')
+      .eq('forked_from_project_id', projectId)
       .order('created_at', { ascending: true });
 
     setForks((forksData as unknown as ForkInfo[]) || []);
@@ -70,8 +73,8 @@ export default function LineageTree({ projectId, projectTitle }: Props) {
         {parent && (
           <div className={styles.node}>
             <span className={styles.connector}>↑</span>
-            <Link href={`/projects/${parent.original_project_id}`} className={styles.link}>
-              {parent.projects?.[0]?.title || 'Parent project'}
+            <Link href={`/projects/${parent.id}`} className={styles.link}>
+              {parent.title}
             </Link>
             <span className={styles.label}>origin</span>
           </div>
@@ -86,11 +89,11 @@ export default function LineageTree({ projectId, projectTitle }: Props) {
         {forks.map((fork) => (
           <div key={fork.id} className={styles.node}>
             <span className={styles.connector}>↓</span>
-            <Link href={`/projects/${fork.new_project_id}`} className={styles.link}>
-              {fork.projects?.[0]?.title || 'Fork'}
+            <Link href={`/projects/${fork.id}`} className={styles.link}>
+              {fork.title}
             </Link>
             <span className={styles.meta}>
-              by @{fork.profiles?.[0]?.username}
+              by @{fork.profiles?.username}
             </span>
           </div>
         ))}

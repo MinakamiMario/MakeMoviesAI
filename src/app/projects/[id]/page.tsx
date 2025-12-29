@@ -9,15 +9,24 @@ import DecisionLog from '@/components/DecisionLog';
 import LineageTree from '@/components/LineageTree';
 import ContributionCard, { ContributionData } from '@/components/ContributionCard';
 import ContributionReview, { SceneData } from '@/components/ContributionReview';
+import {
+  getDefaultBranch,
+  getBranchEdges,
+  buildSceneOrder,
+  findLastSceneId,
+  createEdge,
+  createDefaultBranch,
+  createDefaultCut,
+  BranchData,
+} from '@/lib/graph';
 
 type Project = {
   id: string;
   title: string;
   description: string;
   director_id: string;
-  profiles: {
-    username: string;
-  };
+  forked_from_project_id: string | null;
+  profiles: { username: string };
 };
 
 type Scene = {
@@ -27,17 +36,12 @@ type Scene = {
   media_url: string | null;
   scene_order: number;
   contributor_id: string | null;
-  profiles: {
-    username: string;
-  } | null;
+  profiles: { username: string } | null;
 };
 
 type ForkOrigin = {
-  original_project_id: string;
-  projects: {
-    id: string;
-    title: string;
-  }[];
+  forked_from_project_id: string;
+  parent_project: { title: string } | null;
 };
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
@@ -50,6 +54,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [forkedFrom, setForkedFrom] = useState<ForkOrigin | null>(null);
   const [forkCount, setForkCount] = useState(0);
   const [selectedContribution, setSelectedContribution] = useState<ContributionData | null>(null);
+  const [branch, setBranch] = useState<BranchData | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -61,6 +66,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
 
+    // Load project with fork info
     const { data: project } = await supabase
       .from('projects')
       .select('*, profiles(username)')
@@ -76,15 +82,47 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const userIsDirector = user?.id === project.director_id;
     setIsDirector(userIsDirector);
 
-    const { data: scenes } = await supabase
-      .from('scenes')
-      .select('*, profiles(username)')
-      .eq('project_id', params.id)
-      .order('scene_order', { ascending: true });
+    // Load fork origin if this project was forked
+    if (project.forked_from_project_id) {
+      const { data: parentProject } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', project.forked_from_project_id)
+        .single();
 
-    setScenes(scenes || []);
+      setForkedFrom({
+        forked_from_project_id: project.forked_from_project_id,
+        parent_project: parentProject,
+      });
+    }
 
-    // Directors see all pending, contributors see only their own pending
+    // Get default branch and load scenes via edges
+    const defaultBranch = await getDefaultBranch(supabase, params.id);
+    setBranch(defaultBranch);
+
+    if (defaultBranch) {
+      const edges = await getBranchEdges(supabase, defaultBranch.id);
+      const orderedSceneIds = buildSceneOrder(edges);
+
+      if (orderedSceneIds.length > 0) {
+        const { data: scenesData } = await supabase
+          .from('scenes')
+          .select('*, profiles(username)')
+          .in('id', orderedSceneIds);
+
+        // Sort scenes by edge order
+        const sceneMap = new Map((scenesData || []).map(s => [s.id, s]));
+        const orderedScenes = orderedSceneIds
+          .map(id => sceneMap.get(id))
+          .filter(Boolean) as Scene[];
+
+        setScenes(orderedScenes);
+      } else {
+        setScenes([]);
+      }
+    }
+
+    // Load contributions
     let contributionsQuery = supabase
       .from('contributions')
       .select('*, profiles(username)')
@@ -98,23 +136,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const { data: contributionsData } = await contributionsQuery;
     setContributions((contributionsData as ContributionData[]) || []);
 
-    const { data: forkData } = await supabase
-      .from('forks')
-      .select('original_project_id, projects!forks_original_project_id_fkey(id, title)')
-      .eq('new_project_id', params.id)
-      .single();
-
-    if (forkData?.projects && Array.isArray(forkData.projects) && forkData.projects.length > 0) {
-      setForkedFrom({
-        original_project_id: forkData.original_project_id,
-        projects: forkData.projects,
-      });
-    }
-
+    // Count forks (projects that forked from this one)
     const { count } = await supabase
-      .from('forks')
+      .from('projects')
       .select('*', { count: 'exact', head: true })
-      .eq('original_project_id', params.id);
+      .eq('forked_from_project_id', params.id);
 
     setForkCount(count || 0);
     setLoading(false);
@@ -129,7 +155,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       title: scene.title,
       description: scene.description,
       media_url: scene.media_url,
-      scene_order: scene.scene_order,
+      scene_order: scenes.indexOf(scene) + 1,
       profiles: scene.profiles,
     };
   };
@@ -143,90 +169,119 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   const handleAccept = async (contribution: ContributionData) => {
-    const nextOrder = scenes.length + 1;
+    if (!branch || !user) return;
 
+    const lastSceneId = findLastSceneId(await getBranchEdges(supabase, branch.id));
+
+    // Create scene
     const { data: newScene } = await supabase.from('scenes').insert({
       project_id: params.id,
       title: contribution.title,
       description: contribution.description,
       media_url: contribution.media_url,
-      scene_order: nextOrder,
+      scene_order: scenes.length + 1,
       contributor_id: contribution.contributor_id,
     }).select().single();
 
+    if (!newScene) return;
+
+    // Create edge
+    await createEdge(supabase, params.id, branch.id, lastSceneId, newScene.id, user.id);
+
+    // Update contribution status
     await supabase
       .from('contributions')
       .update({ status: 'accepted' })
       .eq('id', contribution.id);
 
-    if (newScene && user) {
-      await supabase.from('decision_events').insert({
-        project_id: params.id,
-        actor_id: user.id,
-        event_type: 'accept_contribution',
-        contribution_id: contribution.id,
-        result_scene_id: newScene.id,
-      });
-    }
+    // Log decision event
+    await supabase.from('decision_events').insert({
+      project_id: params.id,
+      actor_id: user.id,
+      event_type: 'accept_contribution',
+      contribution_id: contribution.id,
+      result_scene_id: newScene.id,
+      metadata: { branch_id: branch.id },
+    });
 
     setSelectedContribution(null);
     loadProject();
   };
 
   const handleFork = async (contribution: ContributionData) => {
+    if (!user) return;
+
+    // Create new project with fork lineage
     const { data: newProject } = await supabase
       .from('projects')
       .insert({
         title: `${project?.title} (Fork)`,
         description: `Forked from "${project?.title}" — ${contribution.title}`,
         director_id: contribution.contributor_id,
+        forked_from_project_id: params.id,
+        forked_at_scene_id: contribution.parent_scene_id,
+        forked_from_contribution_id: contribution.id,
+        forked_by: contribution.contributor_id,
       })
       .select()
       .single();
 
-    if (newProject) {
-      for (const scene of scenes) {
-        await supabase.from('scenes').insert({
-          project_id: newProject.id,
-          title: scene.title,
-          description: scene.description,
-          media_url: scene.media_url,
-          scene_order: scene.scene_order,
-          contributor_id: scene.contributor_id,
-        });
-      }
+    if (!newProject) return;
 
-      await supabase.from('scenes').insert({
+    // Create default branch for new project
+    const newBranch = await createDefaultBranch(supabase, newProject.id, contribution.contributor_id);
+    if (!newBranch) return;
+
+    // Create default cut for new project
+    await createDefaultCut(supabase, newProject.id, contribution.contributor_id);
+
+    // Copy existing scenes and create edges
+    let prevSceneId: string | null = null;
+    for (const scene of scenes) {
+      const { data: copiedScene } = await supabase.from('scenes').insert({
         project_id: newProject.id,
-        title: contribution.title,
-        description: contribution.description,
-        media_url: contribution.media_url,
-        scene_order: scenes.length + 1,
-        contributor_id: contribution.contributor_id,
-      });
+        title: scene.title,
+        description: scene.description,
+        media_url: scene.media_url,
+        scene_order: scene.scene_order,
+        contributor_id: scene.contributor_id,
+      }).select().single();
 
-      await supabase.from('forks').insert({
-        original_project_id: params.id,
-        forked_by: contribution.contributor_id,
-        forked_from_contribution_id: contribution.id,
-        new_project_id: newProject.id,
-      });
-
-      await supabase
-        .from('contributions')
-        .update({ status: 'forked' })
-        .eq('id', contribution.id);
-
-      if (user) {
-        await supabase.from('decision_events').insert({
-          project_id: params.id,
-          actor_id: user.id,
-          event_type: 'fork_contribution',
-          contribution_id: contribution.id,
-          result_new_project_id: newProject.id,
-        });
+      if (copiedScene) {
+        await createEdge(supabase, newProject.id, newBranch.id, prevSceneId, copiedScene.id, contribution.contributor_id);
+        prevSceneId = copiedScene.id;
       }
     }
+
+    // Add contribution as final scene
+    const { data: finalScene } = await supabase.from('scenes').insert({
+      project_id: newProject.id,
+      title: contribution.title,
+      description: contribution.description,
+      media_url: contribution.media_url,
+      scene_order: scenes.length + 1,
+      contributor_id: contribution.contributor_id,
+    }).select().single();
+
+    if (finalScene) {
+      await createEdge(supabase, newProject.id, newBranch.id, prevSceneId, finalScene.id, contribution.contributor_id);
+    }
+
+    // Update contribution status
+    await supabase
+      .from('contributions')
+      .update({ status: 'forked' })
+      .eq('id', contribution.id);
+
+    // Log decision event
+    await supabase.from('decision_events').insert({
+      project_id: params.id,
+      actor_id: user.id,
+      event_type: 'fork_contribution',
+      contribution_id: contribution.id,
+      result_new_project_id: newProject.id,
+      metadata: { forked_at_scene_id: contribution.parent_scene_id },
+    });
 
     setSelectedContribution(null);
     loadProject();
@@ -266,8 +321,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           {forkedFrom && (
             <p className={styles.forkedFrom}>
               Forked from{' '}
-              <Link href={`/projects/${forkedFrom.original_project_id}`}>
-                {forkedFrom.projects?.[0]?.title}
+              <Link href={`/projects/${forkedFrom.forked_from_project_id}`}>
+                {forkedFrom.parent_project?.title || 'Unknown'}
               </Link>
             </p>
           )}
@@ -295,10 +350,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
             <p className={styles.empty}>No scenes yet.</p>
           ) : (
             <div className={styles.scenes}>
-              {scenes.map((scene) => (
+              {scenes.map((scene, index) => (
                 <div key={scene.id} className={styles.scene}>
                   <span className={styles.sceneNumber}>
-                    {String(scene.scene_order).padStart(2, '0')}
+                    {String(index + 1).padStart(2, '0')}
                   </span>
                   <div className={styles.sceneContent}>
                     {scene.media_url && (
