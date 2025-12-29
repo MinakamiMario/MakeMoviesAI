@@ -88,7 +88,7 @@ export function findLastSceneId(edges: EdgeData[]): string | null {
   const fromSceneIds = new Set(edges.map(e => e.from_scene_id).filter(Boolean));
 
   // Last scene = has incoming edge but no outgoing edge
-  for (const sceneId of toSceneIds) {
+  for (const sceneId of Array.from(toSceneIds)) {
     if (!fromSceneIds.has(sceneId)) {
       return sceneId;
     }
