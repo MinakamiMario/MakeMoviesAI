@@ -5,12 +5,12 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaUpload from '@/components/MediaUpload';
+import { BranchData } from '@/types';
 import {
   getDefaultBranch,
   getBranchEdges,
   findLastSceneId,
   createEdge,
-  BranchData,
 } from '@/lib/graph';
 import styles from './page.module.css';
 
@@ -46,7 +46,6 @@ export default function AddScene({ params }: { params: { id: string } }) {
         return;
       }
 
-      // Get default branch and edges
       const defaultBranch = await getDefaultBranch(supabase, params.id);
       if (defaultBranch) {
         setBranch(defaultBranch);
@@ -78,7 +77,6 @@ export default function AddScene({ params }: { params: { id: string } }) {
       return;
     }
 
-    // Create scene
     const { data: newScene, error: sceneError } = await supabase
       .from('scenes')
       .insert({
@@ -98,7 +96,6 @@ export default function AddScene({ params }: { params: { id: string } }) {
       return;
     }
 
-    // Create edge from last scene (or null) to new scene
     const edgeResult = await createEdge(
       supabase,
       params.id,
