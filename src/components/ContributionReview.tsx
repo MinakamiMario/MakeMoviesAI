@@ -1,27 +1,18 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { ContributionData } from './ContributionCard';
+import { Contribution, Scene } from '@/types';
 import styles from './ContributionReview.module.css';
 
-export type SceneData = {
-  id: string;
-  title: string;
-  description: string | null;
-  media_url: string | null;
-  scene_order: number;
-  profiles: {
-    username: string;
-  } | null;
-};
-
 type Props = {
-  contribution: ContributionData;
-  parentScene: SceneData | null;
+  contribution: Contribution;
+  parentScene: Scene | null;
   onAccept: () => void;
   onFork: () => void;
   onClose: () => void;
   isDirector: boolean;
+  /** Display order of parent scene (1-indexed) */
+  parentSceneOrder?: number;
 };
 
 export default function ContributionReview({
@@ -31,6 +22,7 @@ export default function ContributionReview({
   onFork,
   onClose,
   isDirector,
+  parentSceneOrder,
 }: Props) {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +63,8 @@ export default function ContributionReview({
     });
   };
 
+  const displayOrder = parentSceneOrder ?? parentScene?.scene_order ?? 0;
+
   return (
     <div className={styles.overlay} onClick={handleOverlayClick}>
       <div
@@ -96,7 +90,7 @@ export default function ContributionReview({
             <section className={styles.section}>
               <div className={styles.sectionLabel}>
                 <span className={styles.labelIcon}>◀</span>
-                Parent Scene (Scene {parentScene.scene_order})
+                Parent Scene (Scene {displayOrder})
               </div>
               <div className={styles.sceneCard}>
                 {renderMedia(parentScene.media_url, parentScene.title)}

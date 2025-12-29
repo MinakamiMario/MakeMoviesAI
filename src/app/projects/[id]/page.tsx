@@ -7,8 +7,15 @@ import Link from 'next/link';
 import styles from './page.module.css';
 import DecisionLog from '@/components/DecisionLog';
 import LineageTree from '@/components/LineageTree';
-import ContributionCard, { ContributionData } from '@/components/ContributionCard';
-import ContributionReview, { SceneData } from '@/components/ContributionReview';
+import ContributionCard from '@/components/ContributionCard';
+import ContributionReview from '@/components/ContributionReview';
+import {
+  Project,
+  Scene,
+  Contribution,
+  ForkOrigin,
+  BranchData,
+} from '@/types';
 import {
   getDefaultBranch,
   getBranchEdges,
@@ -17,43 +24,18 @@ import {
   createEdge,
   createDefaultBranch,
   createDefaultCut,
-  BranchData,
 } from '@/lib/graph';
-
-type Project = {
-  id: string;
-  title: string;
-  description: string;
-  director_id: string;
-  forked_from_project_id: string | null;
-  profiles: { username: string };
-};
-
-type Scene = {
-  id: string;
-  title: string;
-  description: string;
-  media_url: string | null;
-  scene_order: number;
-  contributor_id: string | null;
-  profiles: { username: string } | null;
-};
-
-type ForkOrigin = {
-  forked_from_project_id: string;
-  parent_project: { title: string } | null;
-};
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);
   const [scenes, setScenes] = useState<Scene[]>([]);
-  const [contributions, setContributions] = useState<ContributionData[]>([]);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isDirector, setIsDirector] = useState(false);
   const [forkedFrom, setForkedFrom] = useState<ForkOrigin | null>(null);
   const [forkCount, setForkCount] = useState(0);
-  const [selectedContribution, setSelectedContribution] = useState<ContributionData | null>(null);
+  const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [branch, setBranch] = useState<BranchData | null>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -66,37 +48,34 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
 
-    // Load project with fork info
-    const { data: project } = await supabase
+    const { data: projectData } = await supabase
       .from('projects')
       .select('*, profiles!director_id(username)')
       .eq('id', params.id)
       .single();
 
-    if (!project) {
+    if (!projectData) {
       router.push('/projects');
       return;
     }
 
-    setProject(project);
-    const userIsDirector = user?.id === project.director_id;
+    setProject(projectData as Project);
+    const userIsDirector = user?.id === projectData.director_id;
     setIsDirector(userIsDirector);
 
-    // Load fork origin if this project was forked
-    if (project.forked_from_project_id) {
+    if (projectData.forked_from_project_id) {
       const { data: parentProject } = await supabase
         .from('projects')
         .select('title')
-        .eq('id', project.forked_from_project_id)
+        .eq('id', projectData.forked_from_project_id)
         .single();
 
       setForkedFrom({
-        forked_from_project_id: project.forked_from_project_id,
+        forked_from_project_id: projectData.forked_from_project_id,
         parent_project: parentProject,
       });
     }
 
-    // Get default branch and load scenes via edges
     const defaultBranch = await getDefaultBranch(supabase, params.id);
     setBranch(defaultBranch);
 
@@ -110,7 +89,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           .select('*, profiles!contributor_id(username)')
           .in('id', orderedSceneIds);
 
-        // Sort scenes by edge order
         const sceneMap = new Map((scenesData || []).map(s => [s.id, s]));
         const orderedScenes = orderedSceneIds
           .map(id => sceneMap.get(id))
@@ -122,7 +100,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       }
     }
 
-    // Load contributions
     let contributionsQuery = supabase
       .from('contributions')
       .select('*, profiles!contributor_id(username)')
@@ -134,9 +111,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     }
 
     const { data: contributionsData } = await contributionsQuery;
-    setContributions((contributionsData as ContributionData[]) || []);
+    setContributions((contributionsData as Contribution[]) || []);
 
-    // Count forks (projects that forked from this one)
     const { count } = await supabase
       .from('projects')
       .select('*', { count: 'exact', head: true })
@@ -146,21 +122,18 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     setLoading(false);
   };
 
-  const findParentScene = (parentSceneId: string | null): SceneData | null => {
+  const findParentScene = (parentSceneId: string | null): Scene | null => {
     if (!parentSceneId) return null;
-    const scene = scenes.find(s => s.id === parentSceneId);
-    if (!scene) return null;
-    return {
-      id: scene.id,
-      title: scene.title,
-      description: scene.description,
-      media_url: scene.media_url,
-      scene_order: scenes.indexOf(scene) + 1,
-      profiles: scene.profiles,
-    };
+    return scenes.find(s => s.id === parentSceneId) || null;
   };
 
-  const handleSelectContribution = (contribution: ContributionData) => {
+  const getParentSceneOrder = (parentSceneId: string | null): number => {
+    if (!parentSceneId) return 0;
+    const index = scenes.findIndex(s => s.id === parentSceneId);
+    return index >= 0 ? index + 1 : 0;
+  };
+
+  const handleSelectContribution = (contribution: Contribution) => {
     setSelectedContribution(contribution);
   };
 
@@ -168,12 +141,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     setSelectedContribution(null);
   };
 
-  const handleAccept = async (contribution: ContributionData) => {
+  const handleAccept = async (contribution: Contribution) => {
     if (!branch || !user) return;
 
     const lastSceneId = findLastSceneId(await getBranchEdges(supabase, branch.id));
 
-    // Create scene
     const { data: newScene } = await supabase.from('scenes').insert({
       project_id: params.id,
       title: contribution.title,
@@ -185,16 +157,13 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
     if (!newScene) return;
 
-    // Create edge
     await createEdge(supabase, params.id, branch.id, lastSceneId, newScene.id, user.id);
 
-    // Update contribution status
     await supabase
       .from('contributions')
       .update({ status: 'accepted' })
       .eq('id', contribution.id);
 
-    // Log decision event
     await supabase.from('decision_events').insert({
       project_id: params.id,
       actor_id: user.id,
@@ -208,10 +177,9 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     loadProject();
   };
 
-  const handleFork = async (contribution: ContributionData) => {
+  const handleFork = async (contribution: Contribution) => {
     if (!user) return;
 
-    // Create new project with fork lineage
     const { data: newProject } = await supabase
       .from('projects')
       .insert({
@@ -228,14 +196,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
     if (!newProject) return;
 
-    // Create default branch for new project
     const newBranch = await createDefaultBranch(supabase, newProject.id, contribution.contributor_id);
     if (!newBranch) return;
 
-    // Create default cut for new project
     await createDefaultCut(supabase, newProject.id, contribution.contributor_id);
 
-    // Copy existing scenes and create edges
     let prevSceneId: string | null = null;
     for (const scene of scenes) {
       const { data: copiedScene } = await supabase.from('scenes').insert({
@@ -253,7 +218,6 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       }
     }
 
-    // Add contribution as final scene
     const { data: finalScene } = await supabase.from('scenes').insert({
       project_id: newProject.id,
       title: contribution.title,
@@ -267,13 +231,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       await createEdge(supabase, newProject.id, newBranch.id, prevSceneId, finalScene.id, contribution.contributor_id);
     }
 
-    // Update contribution status
     await supabase
       .from('contributions')
       .update({ status: 'forked' })
       .eq('id', contribution.id);
 
-    // Log decision event
     await supabase.from('decision_events').insert({
       project_id: params.id,
       actor_id: user.id,
@@ -414,6 +376,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         <ContributionReview
           contribution={selectedContribution}
           parentScene={findParentScene(selectedContribution.parent_scene_id)}
+          parentSceneOrder={getParentSceneOrder(selectedContribution.parent_scene_id)}
           onAccept={() => handleAccept(selectedContribution)}
           onFork={() => handleFork(selectedContribution)}
           onClose={handleCloseModal}

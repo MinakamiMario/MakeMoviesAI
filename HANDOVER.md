@@ -1,6 +1,6 @@
 # MakeMoviesAI - Project Handover Document
 
-**Datum:** 29 december 2024
+**Datum:** 30 december 2024
 **Repository:** https://github.com/MinakamiMario/MakeMoviesAI
 **Live URL:** https://app.makemoviesai.com
 **Supabase Project:** dicdmlcrhnunhgltiabg (eu-west-1)
@@ -63,11 +63,15 @@ src/
 │   ├── DecisionLog.tsx             # Audit trail of decisions
 │   ├── LineageTree.tsx             # Fork visualization
 │   └── MediaUpload.tsx             # File upload component
-└── lib/
-    ├── supabase/
-    │   ├── client.ts               # Browser client
-    │   └── server.ts               # Server client
-    └── graph.ts                    # Branch/edge utility functions
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts               # Browser client
+│   │   └── server.ts               # Server client
+│   └── graph.ts                    # Branch/edge utility functions
+└── types/
+    ├── index.ts                    # Barrel export
+    ├── entities.ts                 # Core domain types (Project, Scene, etc.)
+    └── graph.ts                    # Graph types (BranchData, EdgeData)
 ```
 
 ---
@@ -189,21 +193,13 @@ Audit trail van alle accept/fork beslissingen.
 - created_at (timestamptz)
 ```
 
-### Legacy Tables (Te Deprecaten)
-
-#### `forks` (DEPRECATED)
-Oude fork tracking - data is gemigreerd naar `projects` kolommen.
-```sql
-- original_project_id
-- new_project_id
-- forked_by
-- forked_from_contribution_id
-- created_at
-```
-**Status:** Kan verwijderd worden nadat bevestigd is dat alle data in `projects` staat.
+### Other Tables
 
 #### `media_assets`
 Media tracking - mogelijk redundant met Supabase Storage.
+
+#### `project_phases`
+Reserved for future phase-based workflow.
 
 ---
 
@@ -263,8 +259,16 @@ Media tracking - mogelijk redundant met Supabase Storage.
 
 ## 5. KEY COMPONENTS
 
+### `src/types/`
+Centrale type definities (single source of truth):
+- `entities.ts` - ProfileRef, Project, Scene, Contribution, ForkOrigin
+- `graph.ts` - BranchData, EdgeData
+- `index.ts` - Barrel export
+
+Alle types zijn query-realistic (nullable waar Supabase dat kan teruggeven).
+
 ### `src/lib/graph.ts`
-Utility functies voor graph operations:
+Utility functies voor graph operations (importeert types uit `@/types`):
 - `getDefaultBranch(supabase, projectId)` - Haalt default branch op
 - `getBranchEdges(supabase, branchId)` - Haalt alle edges van branch
 - `buildSceneOrder(edges)` - Traverseert linked list naar ordered array
@@ -274,7 +278,7 @@ Utility functies voor graph operations:
 - `createDefaultCut(...)` - Maakt Default cut
 
 ### `src/app/projects/[id]/page.tsx`
-Hoofdbestand (~425 regels). Bevat:
+Hoofdbestand (~390 regels). Bevat:
 - Project loading via graph (niet scene_order)
 - Contribution review modal
 - handleAccept / handleFork logic
@@ -297,6 +301,7 @@ Modal voor contribution review:
 - Toont proposed contribution
 - Impact uitleg (accept vs fork)
 - Accept/Fork buttons (alleen voor director)
+- Optional `parentSceneOrder` prop voor display
 
 ### `src/components/DecisionLog.tsx`
 Audit trail component:
@@ -357,6 +362,16 @@ PostgREST weet dan niet welke te gebruiken. Oplossing:
 - Branch = storyline (data)
 - Cut = presentatie/selectie (view)
 
+### Waarom Centrale Types (`src/types/`)?
+
+**Probleem:** Types waren verspreid over components (ContributionData in ContributionCard, SceneData in ContributionReview, etc.) met inconsistente nullability.
+
+**Oplossing:**
+- Single source of truth in `src/types/`
+- Types zijn query-realistic (nullable waar Supabase dat kan teruggeven)
+- Geen circular dependencies (types ← lib, niet andersom)
+- Components importeren uit `@/types`
+
 ---
 
 ## 7. HUIDIGE STATUS
@@ -377,6 +392,7 @@ PostgREST weet dan niet welke te gebruiken. Oplossing:
 | Lineage tree | ✅ |
 | Graph-based timeline | ✅ |
 | Branch/cut schema | ✅ |
+| Centrale types | ✅ |
 
 ### Wat Nog Niet Werkt / TODO 🔧
 
@@ -392,19 +408,14 @@ PostgREST weet dan niet welke te gebruiken. Oplossing:
 | Search/filter projects | ❌ | |
 | User profile pages | ❌ | |
 
-### Bekende Issues 🐛
-
-1. **4 projecten zonder branch**: Aangemaakt tussen migratie en nieuwe code. Fix: run backfill opnieuw of handmatig branches aanmaken.
-
-2. **`forks` tabel deprecated**: Data staat nu in `projects` kolommen, maar oude tabel bestaat nog.
-
 ---
 
-## 8. ROADMAP (Suggesties)
+## 8. ROADMAP
 
-### Phase 1: Core Polish
-- [ ] Fix projecten zonder branch (backfill)
-- [ ] Drop `forks` tabel
+### Phase 1: Core Polish ✅
+- [x] Fix projecten zonder branch (verwijderd: 4 lege test-projecten)
+- [x] Drop `forks` tabel (deprecated, nu verwijderd)
+- [x] Centrale types (`src/types/`)
 - [ ] Parent scene selector bij contribute
 - [ ] Error handling verbeteren
 - [ ] Loading states
@@ -480,16 +491,24 @@ Vercel auto-deploys vanuit `main` branch.
 - Max ~150 regels per file (richtlijn)
 - Components in `src/components/`
 - Utility functions in `src/lib/`
+- Types in `src/types/`
 - CSS Modules naast component
 
 ### Naming
 - Components: PascalCase (`ContributionCard.tsx`)
 - Utilities: camelCase (`graph.ts`)
+- Types: PascalCase (`ProfileRef`, `BranchData`)
 - CSS: `Component.module.css`
+
+### Types
+- Centrale types in `src/types/` (single source of truth)
+- Query-realistic: nullable waar Supabase dat kan teruggeven
+- Import via `@/types` barrel export
+- Geen types in component files
 
 ### Supabase Queries
 - Altijd explicit FK bij joins: `profiles!director_id`
-- Type assertions waar nodig: `as ContributionData[]`
+- Type assertions waar nodig: `as Contribution[]`
 - Error handling bij mutations
 
 ### TypeScript
@@ -523,6 +542,10 @@ Vercel auto-deploys vanuit `main` branch.
 - Created default cut per project
 - Backfilled fork lineage from `forks` table
 
+### 3. `drop_deprecated_forks_table` (30-12-2024)
+- Dropped deprecated `forks` table (0 records, 0 code references)
+- Fork lineage now tracked via `projects.forked_from_*` columns
+
 ---
 
 ## APPENDIX B: RLS Policies
@@ -541,4 +564,19 @@ Alle tabellen hebben Row Level Security enabled:
 
 ---
 
-*Document gegenereerd: 29 december 2024*
+## APPENDIX C: Changelog
+
+### 30-12-2024
+- **Types centralisatie**: Nieuwe `src/types/` folder met centrale type definities
+- **Database cleanup**: Verwijderd 4 lege test-projecten zonder branches
+- **Schema cleanup**: Dropped deprecated `forks` tabel
+- **Code quality**: Components importeren nu uit `@/types` ipv lokale type definities
+
+### 29-12-2024
+- **Graph schema**: Nieuw branching model met `branches`, `scene_edges`, `cuts`
+- **Fork lineage**: Toegevoegd aan `projects` tabel
+- **Decision tracking**: Nieuwe `decision_events` tabel voor audit trail
+
+---
+
+*Document laatst bijgewerkt: 30 december 2024*

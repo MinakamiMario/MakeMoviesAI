@@ -1,25 +1,12 @@
 'use client';
 
 import { KeyboardEvent } from 'react';
+import { Contribution } from '@/types';
 import styles from './ContributionCard.module.css';
 
-export type ContributionData = {
-  id: string;
-  title: string;
-  description: string | null;
-  media_url: string | null;
-  status: string;
-  contributor_id: string;
-  parent_scene_id: string | null;
-  created_at: string;
-  profiles: {
-    username: string;
-  };
-};
-
 type Props = {
-  contribution: ContributionData;
-  onSelect: (contribution: ContributionData) => void;
+  contribution: Contribution;
+  onSelect: (contribution: Contribution) => void;
   isOwnSubmission?: boolean;
 };
 

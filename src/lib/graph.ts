@@ -1,19 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-
-export type BranchData = {
-  id: string;
-  project_id: string;
-  name: string;
-  is_default: boolean;
-  created_by: string;
-};
-
-export type EdgeData = {
-  id: string;
-  branch_id: string;
-  from_scene_id: string | null;
-  to_scene_id: string;
-};
+import { BranchData, EdgeData } from '@/types';
 
 /**
  * Get the default branch for a project
@@ -24,7 +10,7 @@ export async function getDefaultBranch(
 ): Promise<BranchData | null> {
   const { data } = await supabase
     .from('branches')
-    .select('id, project_id, name, is_default, created_by')
+    .select('*')
     .eq('project_id', projectId)
     .eq('is_default', true)
     .single();
@@ -33,7 +19,7 @@ export async function getDefaultBranch(
 }
 
 /**
- * Get all edges for a branch, ordered for traversal
+ * Get all edges for a branch
  */
 export async function getBranchEdges(
   supabase: SupabaseClient,
@@ -41,7 +27,7 @@ export async function getBranchEdges(
 ): Promise<EdgeData[]> {
   const { data } = await supabase
     .from('scene_edges')
-    .select('id, branch_id, from_scene_id, to_scene_id')
+    .select('*')
     .eq('branch_id', branchId);
 
   return data || [];
@@ -53,17 +39,14 @@ export async function getBranchEdges(
 export function buildSceneOrder(edges: EdgeData[]): string[] {
   if (edges.length === 0) return [];
 
-  // Find the start edge (from_scene_id is null)
   const startEdge = edges.find(e => e.from_scene_id === null);
   if (!startEdge) return [];
 
-  // Build a map: from_scene_id -> edge
   const edgeMap = new Map<string | null, EdgeData>();
   for (const edge of edges) {
     edgeMap.set(edge.from_scene_id, edge);
   }
 
-  // Traverse the chain
   const orderedIds: string[] = [];
   let currentEdge: EdgeData | undefined = startEdge;
 
@@ -76,18 +59,14 @@ export function buildSceneOrder(edges: EdgeData[]): string[] {
 }
 
 /**
- * Find the last scene in a branch (the one with no outgoing edge)
+ * Find the last scene in a branch (no outgoing edge)
  */
 export function findLastSceneId(edges: EdgeData[]): string | null {
   if (edges.length === 0) return null;
 
-  // Get all to_scene_ids (scenes that have incoming edges)
   const toSceneIds = new Set(edges.map(e => e.to_scene_id));
-
-  // Get all from_scene_ids (scenes that have outgoing edges)
   const fromSceneIds = new Set(edges.map(e => e.from_scene_id).filter(Boolean));
 
-  // Last scene = has incoming edge but no outgoing edge
   for (const sceneId of Array.from(toSceneIds)) {
     if (!fromSceneIds.has(sceneId)) {
       return sceneId;
