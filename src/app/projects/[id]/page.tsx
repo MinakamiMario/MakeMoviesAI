@@ -144,11 +144,14 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   const handleAccept = async (contribution: Contribution) => {
-    if (!branch || !user) return;
+    if (!branch || !user) {
+      console.error('handleAccept: missing branch or user');
+      return;
+    }
 
     const lastSceneId = findLastSceneId(await getBranchEdges(supabase, branch.id));
 
-    const { data: newScene } = await supabase.from('scenes').insert({
+    const { data: newScene, error: sceneError } = await supabase.from('scenes').insert({
       project_id: params.id,
       title: contribution.title,
       description: contribution.description,
@@ -157,7 +160,10 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       contributor_id: contribution.contributor_id,
     }).select().single();
 
-    if (!newScene) return;
+    if (sceneError || !newScene) {
+      console.error('handleAccept: failed to create scene', sceneError);
+      return;
+    }
 
     await createEdge(supabase, params.id, branch.id, lastSceneId, newScene.id, user.id);
 
@@ -180,13 +186,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   const handleFork = async (contribution: Contribution) => {
-    if (!user) return;
+    if (!user || !project || !branch) {
+      console.error('handleFork: missing required state', { user: !!user, project: !!project, branch: !!branch });
+      return;
+    }
 
-    const { data: newProject } = await supabase
+    const { data: newProject, error: projectError } = await supabase
       .from('projects')
       .insert({
-        title: `${project?.title} (Fork)`,
-        description: `Forked from "${project?.title}" — ${contribution.title}`,
+        title: `${project.title} (Fork)`,
+        description: `Forked from "${project.title}" — ${contribution.title}`,
         director_id: contribution.contributor_id,
         forked_from_project_id: params.id,
         forked_at_scene_id: contribution.parent_scene_id,
@@ -196,10 +205,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       .select()
       .single();
 
-    if (!newProject) return;
+    if (projectError || !newProject) {
+      console.error('handleFork: failed to create project', projectError);
+      return;
+    }
 
     const newBranch = await createDefaultBranch(supabase, newProject.id, contribution.contributor_id);
-    if (!newBranch) return;
+    if (!newBranch) {
+      console.error('handleFork: failed to create default branch');
+      return;
+    }
 
     await createDefaultCut(supabase, newProject.id, contribution.contributor_id);
 
