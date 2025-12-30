@@ -5,9 +5,11 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './page.module.css';
+import ProjectHeader from '@/components/ProjectHeader';
+import SceneTimeline from '@/components/SceneTimeline';
+import PendingContributions from '@/components/PendingContributions';
 import DecisionLog from '@/components/DecisionLog';
 import LineageTree from '@/components/LineageTree';
-import ContributionCard from '@/components/ContributionCard';
 import ContributionReview from '@/components/ContributionReview';
 import {
   Project,
@@ -274,99 +276,25 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       </header>
 
       <div className={styles.content}>
-        <div className={styles.projectHeader}>
-          <span className={styles.label}>Project</span>
-          <h1>{project.title}</h1>
-          <p className={styles.director}>
-            Directed by <span>@{project.profiles?.username}</span>
-          </p>
-          {forkedFrom && (
-            <p className={styles.forkedFrom}>
-              Forked from{' '}
-              <Link href={`/projects/${forkedFrom.forked_from_project_id}`}>
-                {forkedFrom.parent_project?.title || 'Unknown'}
-              </Link>
-            </p>
-          )}
-          {forkCount > 0 && (
-            <span className={styles.forkBadge}>
-              {forkCount} fork{forkCount !== 1 ? 's' : ''}
-            </span>
-          )}
-          {project.description && (
-            <p className={styles.description}>{project.description}</p>
-          )}
-        </div>
+        <ProjectHeader
+          project={project}
+          forkedFrom={forkedFrom}
+          forkCount={forkCount}
+        />
 
-        <div className={styles.timeline}>
-          <div className={styles.timelineHeader}>
-            <h2>Timeline</h2>
-            {isDirector && (
-              <Link href={`/projects/${params.id}/add-scene`} className={styles.addBtn}>
-                + Add scene
-              </Link>
-            )}
-          </div>
+        <SceneTimeline
+          scenes={scenes}
+          isDirector={isDirector}
+          projectId={params.id}
+          showContributeButton={!!user && !isDirector}
+        />
 
-          {scenes.length === 0 ? (
-            <p className={styles.empty}>No scenes yet.</p>
-          ) : (
-            <div className={styles.scenes}>
-              {scenes.map((scene, index) => (
-                <div key={scene.id} className={styles.scene}>
-                  <span className={styles.sceneNumber}>
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <div className={styles.sceneContent}>
-                    {scene.media_url && (
-                      <div className={styles.sceneMedia}>
-                        {scene.media_url.match(/\.(mp4|webm|mov)$/i) ? (
-                          <video src={scene.media_url} controls />
-                        ) : (
-                          <img src={scene.media_url} alt={scene.title} />
-                        )}
-                      </div>
-                    )}
-                    <h3>{scene.title}</h3>
-                    {scene.description && <p>{scene.description}</p>}
-                    {scene.profiles && (
-                      <span className={styles.contributor}>
-                        by @{scene.profiles.username}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {user && !isDirector && (
-            <Link
-              href={`/projects/${params.id}/contribute`}
-              className={styles.contributeBtn}
-            >
-              + Submit a contribution
-            </Link>
-          )}
-        </div>
-
-        {contributions.length > 0 && (
-          <div className={styles.contributions}>
-            <h2>
-              {isDirector ? 'Pending Contributions' : 'Your Submissions'}
-            </h2>
-            <div className={styles.contributionsList}>
-              {contributions.map((contribution) => (
-                <ContributionCard
-                  key={contribution.id}
-                  contribution={contribution}
-                  onSelect={handleSelectContribution}
-                  isOwnSubmission={contribution.contributor_id === user?.id}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <PendingContributions
+          contributions={contributions}
+          onSelect={handleSelectContribution}
+          isDirector={isDirector}
+          currentUserId={user?.id || null}
+        />
 
         <LineageTree projectId={params.id} projectTitle={project.title} />
         <DecisionLog projectId={params.id} />

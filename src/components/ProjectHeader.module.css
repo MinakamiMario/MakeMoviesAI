@@ -1,0 +1,56 @@
+.projectHeader {
+  margin-bottom: 3rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+}
+
+.projectHeader h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+.director {
+  color: #888;
+  font-size: 0.95rem;
+}
+
+.director span {
+  color: #3b82f6;
+}
+
+.forkedFrom {
+  color: #888;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.forkedFrom a {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.forkedFrom a:hover {
+  text-decoration: underline;
+}
+
+.forkBadge {
+  display: inline-block;
+  background: #1a1a2e;
+  color: #888;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  margin-top: 0.75rem;
+}
+
+.description {
+  color: #aaa;
+  margin-top: 1rem;
+  line-height: 1.6;
+}
