@@ -15,15 +15,12 @@ MakeMoviesAI is een **collaboratief filmmaking platform** waar meerdere mensen s
 
 ### Core Value Proposition (voor acquirers)
 
-Het platform demonstreert drie kernconcepten die interessant zijn voor AI/media bedrijven:
-
 1. **Fork-based conflict resolution**: Afgewezen werk verdwijnt niet, maar wordt een alternatieve storyline
 2. **Explicit decision states**: Elke creatieve beslissing is traceerbaar (accept/fork)
 3. **Traceable lineage**: Volledige herkomst van elk project en elke scene
 
 ### GitHub-model voor Films
 
-Net zoals GitHub branching gebruikt voor code:
 - **Branch** = alternatieve storyline binnen hetzelfde project (zelfde director)
 - **Fork** = nieuw project ontstaan uit rejection (nieuwe director/eigenaar)
 
@@ -41,11 +38,13 @@ Net zoals GitHub branching gebruikt voor code:
 | Hosting | Vercel |
 | Repo | GitHub |
 
-### Project Structuur
+---
+
+## 3. PROJECT STRUCTUUR
 
 ```
 src/
-├── app/
+├── app/                            # Next.js App Router pages
 │   ├── page.tsx                    # Landing page
 │   ├── login/page.tsx              # Auth
 │   ├── signup/page.tsx             # Auth
@@ -54,529 +53,446 @@ src/
 │       ├── page.tsx                # Browse all projects
 │       ├── new/page.tsx            # Create project
 │       └── [id]/
-│           ├── page.tsx            # Project detail (MAIN FILE)
-│           ├── add-scene/page.tsx  # Director adds scene
-│           └── contribute/page.tsx # Contributor submits
-├── components/
+│           ├── page.tsx            # Project detail (orchestrator)
+│           ├── page.module.css     # Page-level styles
+│           ├── add-scene/          # Director adds scene
+│           └── contribute/         # Contributor submits
+│
+├── components/                     # Presentational components
+│   ├── ProjectHeader.tsx           # Project title, director, fork info
+│   ├── ProjectHeader.module.css
+│   ├── SceneTimeline.tsx           # Timeline met scenes
+│   ├── SceneTimeline.module.css
+│   ├── PendingContributions.tsx    # Lijst pending contributions
+│   ├── PendingContributions.module.css
 │   ├── ContributionCard.tsx        # Collapsed contribution preview
+│   ├── ContributionCard.module.css
 │   ├── ContributionReview.tsx      # Modal for accept/fork decision
-│   ├── DecisionLog.tsx             # Audit trail of decisions
+│   ├── ContributionReview.module.css
+│   ├── DecisionLog.tsx             # Audit trail component
+│   ├── DecisionLog.module.css
 │   ├── LineageTree.tsx             # Fork visualization
-│   └── MediaUpload.tsx             # File upload component
-├── lib/
+│   ├── LineageTree.module.css
+│   ├── MediaUpload.tsx             # File upload component
+│   └── MediaUpload.module.css
+│
+├── lib/                            # Business logic & utilities
 │   ├── supabase/
-│   │   ├── client.ts               # Browser client
-│   │   └── server.ts               # Server client
-│   └── graph.ts                    # Branch/edge utility functions
-└── types/
+│   │   ├── client.ts               # Browser Supabase client
+│   │   └── server.ts               # Server Supabase client
+│   ├── graph.ts                    # Graph traversal utilities
+│   ├── projectLoader.ts            # Data fetching (alle reads)
+│   └── decisions.ts                # Mutations (accept/fork)
+│
+└── types/                          # Centrale type definities
     ├── index.ts                    # Barrel export
-    ├── entities.ts                 # Core domain types (Project, Scene, etc.)
+    ├── entities.ts                 # Domain types (Project, Scene, etc.)
     └── graph.ts                    # Graph types (BranchData, EdgeData)
 ```
 
+### Folder Filosofie
+
+| Folder | Verantwoordelijkheid | Regel |
+|--------|---------------------|-------|
+| `app/` | Routing + orchestratie | Geen business logic, alleen state + component compositie |
+| `components/` | Presentational UI | Alleen props + JSX + styling, geen data fetching |
+| `lib/` | Business logic | Alle Supabase queries, mutations, utilities |
+| `types/` | Type definities | Single source of truth, geen logic |
+
+### Bestandsgrootte Richtlijnen
+
+- **Max ~150 regels per bestand** (richtlijn, niet strikt)
+- Als een bestand groter wordt → splits logisch op
+- Niet splitsen in `file_1.ts`, `file_2.ts` maar op verantwoordelijkheid
+
 ---
 
-## 3. DATABASE ARCHITECTUUR
+## 4. ARCHITECTUUR PATRONEN
+
+### 4.1 Data Flow
+
+```
+┌─────────────┐     ┌──────────────────┐     ┌─────────────┐
+│  page.tsx   │────▶│ projectLoader.ts │────▶│  Supabase   │
+│ (orchestr.) │     │    (reads)       │     │     DB      │
+└─────────────┘     └──────────────────┘     └─────────────┘
+       │
+       │ mutations
+       ▼
+┌──────────────────┐
+│  decisions.ts    │────▶ Supabase DB
+│ (accept/fork)    │
+└──────────────────┘
+```
+
+### 4.2 Component Hiërarchie
+
+```
+page.tsx (orchestrator)
+├── ProjectHeader (presentational)
+├── SceneTimeline (presentational)
+├── PendingContributions (presentational)
+│   └── ContributionCard (presentational)
+├── LineageTree (data-fetching, eigen queries)
+├── DecisionLog (data-fetching, eigen queries)
+└── ContributionReview (modal, presentational)
+```
+
+### 4.3 Separation of Concerns
+
+| Layer | Bestand | Mag wel | Mag niet |
+|-------|---------|---------|----------|
+| Page | `page.tsx` | State, useEffect, component compositie | Directe Supabase queries |
+| Loader | `projectLoader.ts` | Supabase reads, data mapping | Mutations, UI logic |
+| Decisions | `decisions.ts` | Supabase writes, decision_events | UI logic, reads |
+| Components | `*.tsx` | Props, JSX, event handlers | Supabase calls |
+| Types | `types/*.ts` | Type definities | Logic, imports van lib |
+
+---
+
+## 5. KEY BESTANDEN & FUNCTIES
+
+### `src/lib/projectLoader.ts`
+
+Centrale data loader voor project pagina.
+
+```typescript
+type ProjectPageData = {
+  project: Project;
+  scenes: Scene[];
+  contributions: Contribution[];
+  branch: BranchData | null;
+  forkedFrom: ForkOrigin | null;
+  forkCount: number;
+  isDirector: boolean;
+};
+
+async function loadProjectData(
+  supabase: SupabaseClient,
+  projectId: string,
+  userId: string | null
+): Promise<ProjectPageData | null>
+```
+
+**Gebruik:**
+```typescript
+const data = await loadProjectData(supabase, params.id, user?.id);
+if (!data) { router.push('/projects'); return; }
+```
+
+### `src/lib/decisions.ts`
+
+Mutations voor contribution beslissingen.
+
+```typescript
+type AcceptResult = { success: boolean; sceneId?: string; error?: string };
+type ForkResult = { success: boolean; newProjectId?: string; error?: string };
+
+async function acceptContribution(...): Promise<AcceptResult>
+async function forkContribution(...): Promise<ForkResult>
+```
+
+**Belangrijk:** Beide functies loggen automatisch naar `decision_events`.
+
+### `src/lib/graph.ts`
+
+Graph traversal utilities voor scene ordering.
+
+| Functie | Doel |
+|---------|------|
+| `getDefaultBranch()` | Haalt default branch van project |
+| `getBranchEdges()` | Haalt alle edges van een branch |
+| `buildSceneOrder()` | Bouwt geordende array van scene IDs |
+| `findLastSceneId()` | Vindt laatste scene (geen outgoing edge) |
+| `createEdge()` | Maakt nieuwe edge |
+| `createDefaultBranch()` | Maakt "Main" branch |
+| `createDefaultCut()` | Maakt default cut |
+
+### `src/types/`
+
+Centrale type definities. **Altijd importeren via `@/types`**.
+
+```typescript
+// entities.ts
+type ProfileRef = { username: string };
+type Project = { id: string; title: string; ... };
+type Scene = { id: string; title: string; ... };
+type Contribution = { id: string; title: string; ... };
+type ForkOrigin = { forked_from_project_id: string; ... };
+
+// graph.ts
+type BranchData = { id: string; name: string; ... };
+type EdgeData = { id: string; from_scene_id: string | null; ... };
+```
+
+---
+
+## 6. DATABASE SCHEMA
 
 ### Core Tables
 
-#### `profiles`
-Gebruikersprofielen (gekoppeld aan Supabase Auth).
-```sql
-- id (uuid, PK, references auth.users)
-- username (text, unique)
-- created_at (timestamptz)
+| Table | Doel |
+|-------|------|
+| `profiles` | User profielen (linked to auth.users) |
+| `projects` | Film projecten + fork lineage |
+| `scenes` | Scenes binnen project |
+| `contributions` | Pending contributions |
+| `branches` | Named storylines |
+| `scene_edges` | Graph connections tussen scenes |
+| `cuts` | Presentation layer (reserved) |
+| `decision_events` | Audit trail |
+
+### Belangrijke Relaties
+
+```
+projects.director_id → profiles.id
+projects.forked_by → profiles.id        # LET OP: 2 FK's naar profiles!
+scenes.contributor_id → profiles.id
+contributions.contributor_id → profiles.id
+scene_edges.branch_id → branches.id
 ```
 
-#### `projects`
-Filmprojecten.
-```sql
-- id (uuid, PK)
-- title (text)
-- description (text)
-- director_id (uuid, FK profiles) -- eigenaar
-- created_at (timestamptz)
--- Fork lineage columns:
-- forked_from_project_id (uuid, FK projects)
-- forked_at_branch_id (uuid, FK branches)
-- forked_at_scene_id (uuid, FK scenes)
-- forked_from_contribution_id (uuid, FK contributions)
-- forked_by (uuid, FK profiles)
-```
+### FK Ambiguity Oplossing
 
-#### `scenes`
-Scenes binnen een project.
-```sql
-- id (uuid, PK)
-- project_id (uuid, FK projects)
-- title (text)
-- description (text)
-- media_url (text) -- Supabase Storage URL
-- scene_order (int) -- legacy, nu via edges
-- contributor_id (uuid, FK profiles)
-- created_at (timestamptz)
-```
+Bij meerdere FK's naar dezelfde tabel, **altijd expliciet specificeren**:
 
-#### `contributions`
-Ingediende bijdragen (pending review).
-```sql
-- id (uuid, PK)
-- project_id (uuid, FK projects)
-- title (text)
-- description (text)
-- media_url (text)
-- contributor_id (uuid, FK profiles)
-- parent_scene_id (uuid, FK scenes) -- waar dit op aansluit
-- status (text: 'pending', 'accepted', 'forked')
-- created_at (timestamptz)
-```
-
-### Graph Tables (Branching Architectuur)
-
-#### `branches`
-Named storylines binnen een project.
-```sql
-- id (uuid, PK)
-- project_id (uuid, FK projects)
-- name (text, default 'Main')
-- description (text)
-- is_default (boolean) -- exact 1 per project
-- is_archived (boolean)
-- forked_from_branch_id (uuid, FK branches) -- in-project branching
-- fork_point_scene_id (uuid, FK scenes)
-- created_by (uuid, FK profiles)
-- created_at (timestamptz)
-
--- Constraint: UNIQUE (project_id) WHERE is_default = true
-```
-
-#### `scene_edges`
-Graph-based scene connections (vervangt lineaire scene_order).
-```sql
-- id (uuid, PK)
-- project_id (uuid, FK projects)
-- branch_id (uuid, FK branches)
-- from_scene_id (uuid, FK scenes, NULL = start)
-- to_scene_id (uuid, FK scenes)
-- created_by (uuid, FK profiles)
-- created_at (timestamptz)
-
--- Constraints:
--- UNIQUE (branch_id, from_scene_id) -- max 1 outgoing per node
--- UNIQUE (branch_id, to_scene_id)   -- max 1 incoming (linear)
--- UNIQUE (branch_id) WHERE from_scene_id IS NULL -- 1 start per branch
--- CHECK (from_scene_id IS NULL OR from_scene_id <> to_scene_id) -- no self-loop
-```
-
-#### `cuts`
-Presentation layer (reserved for future).
-```sql
-- id (uuid, PK)
-- project_id (uuid, FK projects)
-- name (text, default 'Default')
-- is_default (boolean)
-- created_by (uuid, FK profiles)
-- created_at (timestamptz)
-```
-
-#### `decision_events`
-Audit trail van alle accept/fork beslissingen.
-```sql
-- id (uuid, PK)
-- project_id (uuid, FK projects)
-- actor_id (uuid, FK profiles)
-- event_type (enum: 'accept_contribution', 'fork_contribution')
-- contribution_id (uuid, FK contributions)
-- result_scene_id (uuid, FK scenes) -- bij accept
-- result_new_project_id (uuid, FK projects) -- bij fork
-- metadata (jsonb) -- extra context
-- created_at (timestamptz)
-```
-
-### Other Tables
-
-#### `media_assets`
-Media tracking - mogelijk redundant met Supabase Storage.
-
-#### `project_phases`
-Reserved for future phase-based workflow.
-
----
-
-## 4. KERNFUNCTIONALITEIT
-
-### User Flows
-
-#### Flow 1: Project Aanmaken
-1. User gaat naar `/projects/new`
-2. Vult titel + beschrijving in
-3. Systeem maakt:
-   - Project record
-   - Default "Main" branch (is_default=true)
-   - Default cut (reserved)
-4. Redirect naar project detail
-
-#### Flow 2: Scene Toevoegen (Director)
-1. Director klikt "+ Add scene" op `/projects/[id]`
-2. Upload media + titel/beschrijving
-3. Systeem maakt:
-   - Scene record
-   - Edge van laatste scene (of NULL) naar nieuwe scene
-4. Timeline toont nieuwe scene
-
-#### Flow 3: Contribution Indienen (Contributor)
-1. Non-director ziet "+ Submit a contribution"
-2. Upload media + titel/beschrijving
-3. Systeem maakt contribution met:
-   - `parent_scene_id` = laatste scene in default branch
-   - `status` = 'pending'
-4. Director ziet contribution in "Pending Contributions"
-
-#### Flow 4: Accept Contribution
-1. Director klikt op contribution card
-2. Modal toont: parent scene → proposed scene
-3. Director klikt "Accept"
-4. Systeem:
-   - Maakt scene van contribution
-   - Maakt edge naar nieuwe scene
-   - Update contribution status → 'accepted'
-   - Logt decision_event (accept_contribution)
-
-#### Flow 5: Fork Contribution
-1. Director klikt op contribution card
-2. Modal toont context + impact uitleg
-3. Director klikt "Fork"
-4. Systeem maakt:
-   - Nieuw project met fork lineage
-   - Default branch + cut voor nieuw project
-   - Kopieert alle bestaande scenes + edges
-   - Voegt contribution toe als laatste scene
-   - Update contribution status → 'forked'
-   - Logt decision_event (fork_contribution)
-5. Contributor wordt director van nieuw project
-
----
-
-## 5. KEY COMPONENTS
-
-### `src/types/`
-Centrale type definities (single source of truth):
-- `entities.ts` - ProfileRef, Project, Scene, Contribution, ForkOrigin
-- `graph.ts` - BranchData, EdgeData
-- `index.ts` - Barrel export
-
-Alle types zijn query-realistic (nullable waar Supabase dat kan teruggeven).
-
-### `src/lib/graph.ts`
-Utility functies voor graph operations (importeert types uit `@/types`):
-- `getDefaultBranch(supabase, projectId)` - Haalt default branch op
-- `getBranchEdges(supabase, branchId)` - Haalt alle edges van branch
-- `buildSceneOrder(edges)` - Traverseert linked list naar ordered array
-- `findLastSceneId(edges)` - Vindt scene zonder outgoing edge
-- `createEdge(...)` - Maakt nieuwe edge
-- `createDefaultBranch(...)` - Maakt Main branch
-- `createDefaultCut(...)` - Maakt Default cut
-
-### `src/app/projects/[id]/page.tsx`
-Hoofdbestand (~390 regels). Bevat:
-- Project loading via graph (niet scene_order)
-- Contribution review modal
-- handleAccept / handleFork logic
-- Timeline rendering
-- LineageTree + DecisionLog integratie
-
-**Let op FK specificatie in queries:**
 ```typescript
-// CORRECT - expliciet FK bij meerdere relaties
+// ✅ CORRECT
 .select('*, profiles!director_id(username)')
-.select('*, profiles!contributor_id(username)')
 
-// FOUT - ambiguous bij meerdere FK's naar profiles
+// ❌ FOUT - PostgREST weet niet welke FK
 .select('*, profiles(username)')
 ```
 
-### `src/components/ContributionReview.tsx`
-Modal voor contribution review:
-- Toont parent scene context
-- Toont proposed contribution
-- Impact uitleg (accept vs fork)
-- Accept/Fork buttons (alleen voor director)
-- Optional `parentSceneOrder` prop voor display
-
-### `src/components/DecisionLog.tsx`
-Audit trail component:
-- Toont chronologische lijst van beslissingen
-- Badge: Accepted (groen) / Forked (blauw)
-- Link naar geforkt project
-
-### `src/components/LineageTree.tsx`
-Fork visualisatie:
-- Parent project (indien fork)
-- Current project (highlighted)
-- Child forks
-
 ---
 
-## 6. BELANGRIJKE TECHNISCHE BESLISSINGEN
+## 7. DEVELOPMENT WORKFLOW
 
-### Waarom Graph Model (scene_edges) ipv Lineaire scene_order?
-
-**Probleem:** Lineaire `scene_order` ondersteunt geen branching binnen een project.
-
-**Oplossing:** Graph-based model met `scene_edges` tabel:
-- Elke edge verbindt twee scenes
-- `from_scene_id = NULL` betekent start van branch
-- Traversal via linked list
-- Constraints garanderen lineariteit binnen branch
-
-**Trade-off:** Complexere queries, maar schaalt naar echte branching.
-
-### Waarom Branch ≠ Fork als Aparte Concepten?
-
-| Concept | Scope | Ownership | Use Case |
-|---------|-------|-----------|----------|
-| Branch | Binnen project | Zelfde director | "Happy Ending" vs "Dark Ending" |
-| Fork | Nieuw project | Nieuwe director | Afgewezen contribution krijgt eigen leven |
-
-Dit is cruciaal voor:
-- Juridische helderheid (wie bezit wat)
-- UX clarity (contributor wordt director na fork)
-- Acquisition story (clean ownership model)
-
-### Waarom Explicit FK in Supabase Queries?
-
-Na toevoegen van `forked_by` FK naar `profiles` ontstonden 2 relaties:
-- `projects.director_id → profiles.id`
-- `projects.forked_by → profiles.id`
-
-PostgREST weet dan niet welke te gebruiken. Oplossing:
-```typescript
-.select('*, profiles!director_id(username)')
-```
-
-### Waarom `cuts` Tabel Nu Al (Terwijl Niet Gebruikt)?
-
-**Anticipatie:** Later wil je "cuts" = presentaties van branches. Als je nu alleen `is_default` op branches zet, ga je dat later misbruiken.
-
-**Clean model:**
-- Branch = storyline (data)
-- Cut = presentatie/selectie (view)
-
-### Waarom Centrale Types (`src/types/`)?
-
-**Probleem:** Types waren verspreid over components (ContributionData in ContributionCard, SceneData in ContributionReview, etc.) met inconsistente nullability.
-
-**Oplossing:**
-- Single source of truth in `src/types/`
-- Types zijn query-realistic (nullable waar Supabase dat kan teruggeven)
-- Geen circular dependencies (types ← lib, niet andersom)
-- Components importeren uit `@/types`
-
----
-
-## 7. HUIDIGE STATUS
-
-### Wat Werkt ✅
-
-| Feature | Status |
-|---------|--------|
-| User auth (signup/login) | ✅ |
-| Project CRUD | ✅ |
-| Scene toevoegen (director) | ✅ |
-| Media upload (video/image) | ✅ |
-| Contribution indienen | ✅ |
-| Contribution review modal | ✅ |
-| Accept contribution | ✅ |
-| Fork contribution | ✅ |
-| Decision audit log | ✅ |
-| Lineage tree | ✅ |
-| Graph-based timeline | ✅ |
-| Branch/cut schema | ✅ |
-| Centrale types | ✅ |
-
-### Wat Nog Niet Werkt / TODO 🔧
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| In-project branching UI | ❌ | Schema klaar, UI niet |
-| Branch switcher | ❌ | Alleen default branch wordt getoond |
-| Cuts (presentation layer) | ❌ | Tabel bestaat, geen UI |
-| Parent scene selector bij contribute | ❌ | Nu altijd laatste scene |
-| Permissions/roles | ❌ | Nu alleen director vs contributor |
-| Notifications | ❌ | |
-| Comments/discussion | ❌ | |
-| Search/filter projects | ❌ | |
-| User profile pages | ❌ | |
-
----
-
-## 8. ROADMAP
-
-### Phase 1: Core Polish ✅
-- [x] Fix projecten zonder branch (verwijderd: 4 lege test-projecten)
-- [x] Drop `forks` tabel (deprecated, nu verwijderd)
-- [x] Centrale types (`src/types/`)
-- [ ] Parent scene selector bij contribute
-- [ ] Error handling verbeteren
-- [ ] Loading states
-
-### Phase 2: Branching UI
-- [ ] Branch switcher in timeline
-- [ ] "Create branch" vanaf een scene
-- [ ] Branch list/management
-- [ ] Visual diff tussen branches
-
-### Phase 3: Collaboration
-- [ ] Comments op scenes
-- [ ] Notifications (nieuwe contribution, accepted, forked)
-- [ ] Contributor invites
-- [ ] Role-based permissions
-
-### Phase 4: Presentation
-- [ ] Cuts implementeren
-- [ ] "Watch" mode (film playback)
-- [ ] Export naar video
-- [ ] Public/private projects
-
-### Phase 5: AI Integration
-- [ ] AI scene suggestions
-- [ ] Auto-tagging
-- [ ] Script-to-scene
-- [ ] Scene continuation generation
-
----
-
-## 9. DEVELOPMENT SETUP
-
-### Vereisten
-- Node.js 18+
-- npm of yarn
-- Supabase account (of self-hosted)
-
-### Local Development
+### Lokale Setup
 
 ```bash
-# Clone repo
 git clone https://github.com/MinakamiMario/MakeMoviesAI.git
 cd MakeMoviesAI
-
-# Install dependencies
 npm install
-
-# Create .env.local
 cp .env.example .env.local
-# Vul in:
-# NEXT_PUBLIC_SUPABASE_URL=https://dicdmlcrhnunhgltiabg.supabase.co
-# NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-
-# Run dev server
+# Vul NEXT_PUBLIC_SUPABASE_URL en NEXT_PUBLIC_SUPABASE_ANON_KEY in
 npm run dev
 ```
 
-### Supabase Access
+### Voor Elke Wijziging
 
-- **Dashboard:** https://supabase.com/dashboard/project/dicdmlcrhnunhgltiabg
+1. **`npm run build`** - TypeScript check (belangrijker dan `npm run dev`)
+2. **Smoke test** - Browse projects, open project, test accept/fork
+3. **Check console** - Geen FK ambiguity errors, geen undefined access
+
+### Commit Conventie
+
+```
+type(scope): korte beschrijving
+
+- Detail 1
+- Detail 2
+```
+
+Types: `feat`, `fix`, `refactor`, `docs`, `chore`
+
+Voorbeelden:
+```
+refactor(project): extract presentational components
+fix(decisions): add safety guards to handleFork
+feat(timeline): add branch switcher
+```
+
+### Refactor Regels
+
+1. **Types-first**: Definieer interfaces voordat je implementeert
+2. **Kleine commits**: Eén verantwoordelijkheid per commit
+3. **Geen halve refactors**: Pas af als alle consumers gemigreerd zijn
+4. **Build check**: Elke commit moet `npm run build` passeren
+
+---
+
+## 8. VEELVOORKOMENDE TAKEN
+
+### Nieuwe Component Toevoegen
+
+1. Maak `src/components/NieuweComponent.tsx`
+2. Maak `src/components/NieuweComponent.module.css`
+3. Importeer types uit `@/types`
+4. Geen Supabase calls in component
+
+### Nieuwe Data Toevoegen aan Project Page
+
+1. Extend `ProjectPageData` type in `projectLoader.ts`
+2. Voeg query toe aan `loadProjectData()`
+3. Voeg state toe aan `page.tsx`
+4. Geef door als prop aan component
+
+### Nieuwe Mutation Toevoegen
+
+1. Definieer result type in `decisions.ts`
+2. Implementeer functie met error handling
+3. Log naar `decision_events` indien relevant
+4. Return `{ success, error }` patroon
+
+### Type Toevoegen
+
+1. Voeg toe aan `src/types/entities.ts` of `graph.ts`
+2. Export via `src/types/index.ts`
+3. Importeer via `@/types`
+
+---
+
+## 9. KNOWN ISSUES & GOTCHAS
+
+### TypeScript Set Iteration
+
+```typescript
+// ✅ CORRECT
+for (const item of Array.from(mySet)) { }
+
+// ❌ FOUT (TS config issue)
+for (const item of mySet) { }
+```
+
+### Supabase Single vs Array
+
+```typescript
+// .single() returned object of null
+const { data } = await supabase.from('projects').select().eq('id', id).single();
+// data: Project | null
+
+// Zonder .single() returned array
+const { data } = await supabase.from('projects').select().eq('id', id);
+// data: Project[] | null
+```
+
+### CSS Module Import
+
+```typescript
+// ✅ CORRECT
+import styles from './Component.module.css';
+
+// ❌ FOUT
+import './Component.css';
+```
+
+---
+
+## 10. ROADMAP
+
+### ✅ Phase 1: Core Polish (Voltooid)
+- [x] Types centralisatie (`src/types/`)
+- [x] JSX extraction (ProjectHeader, SceneTimeline, PendingContributions)
+- [x] Data centralisatie (`projectLoader.ts`, `decisions.ts`)
+- [x] Database cleanup (forks tabel, test projecten)
+
+### 🔄 Phase 1.5: Stabiliteit (Huidig)
+- [ ] RLS sanity check (graph tabellen)
+- [ ] Error boundaries + user-friendly errors
+- [ ] Loading/empty states per component
+
+### Phase 2: UI Polish
+- [ ] Consistent button states (loading, disabled)
+- [ ] Skeleton loaders
+- [ ] Toast notifications
+- [ ] Mobile responsive
+
+### Phase 3: Branching UI
+- [ ] Branch switcher in timeline
+- [ ] Create branch vanaf scene
+- [ ] Visual diff tussen branches
+
+### Phase 4: Collaboration
+- [ ] Comments op scenes
+- [ ] Notifications
+- [ ] Role-based permissions
+
+---
+
+## 11. SUPABASE CONFIGURATIE
+
+### Project Details
+- **Project ID:** dicdmlcrhnunhgltiabg
 - **Region:** eu-west-1
-- **Tables:** Zie sectie 3
+- **Dashboard:** https://supabase.com/dashboard/project/dicdmlcrhnunhgltiabg
 
-### Deployment
-
-Vercel auto-deploys vanuit `main` branch.
-
----
-
-## 10. CODING CONVENTIONS
-
-### File Organization
-- Max ~150 regels per file (richtlijn)
-- Components in `src/components/`
-- Utility functions in `src/lib/`
-- Types in `src/types/`
-- CSS Modules naast component
-
-### Naming
-- Components: PascalCase (`ContributionCard.tsx`)
-- Utilities: camelCase (`graph.ts`)
-- Types: PascalCase (`ProfileRef`, `BranchData`)
-- CSS: `Component.module.css`
-
-### Types
-- Centrale types in `src/types/` (single source of truth)
-- Query-realistic: nullable waar Supabase dat kan teruggeven
-- Import via `@/types` barrel export
-- Geen types in component files
-
-### Supabase Queries
-- Altijd explicit FK bij joins: `profiles!director_id`
-- Type assertions waar nodig: `as Contribution[]`
-- Error handling bij mutations
-
-### TypeScript
-- Explicit types voor props en state
-- `type` voor data shapes
-- Avoid `any` waar mogelijk
-
----
-
-## 11. CONTACT & RESOURCES
-
-- **Repository:** https://github.com/MinakamiMario/MakeMoviesAI
-- **Live:** https://app.makemoviesai.com
-- **Supabase:** Project ID `dicdmlcrhnunhgltiabg`
-
----
-
-## APPENDIX A: Migraties Uitgevoerd
-
-### 1. `create_graph_schema` (29-12-2024)
-- Created `cuts` table
-- Created `branches` table
-- Created `scene_edges` table
-- Added fork columns to `projects`
-- Created all constraints and indexes
-- Created RLS policies
-
-### 2. `backfill_graph_data` (29-12-2024)
-- Created default "Main" branch per project
-- Created scene_edges from scene_order
-- Created default cut per project
-- Backfilled fork lineage from `forks` table
-
-### 3. `drop_deprecated_forks_table` (30-12-2024)
-- Dropped deprecated `forks` table (0 records, 0 code references)
-- Fork lineage now tracked via `projects.forked_from_*` columns
-
----
-
-## APPENDIX B: RLS Policies
-
-Alle tabellen hebben Row Level Security enabled:
+### RLS Policies Overzicht
 
 | Table | SELECT | INSERT | UPDATE | DELETE |
 |-------|--------|--------|--------|--------|
 | projects | everyone | authenticated | director | director |
 | scenes | everyone | authenticated | director | director |
-| contributions | everyone | authenticated (own) | contributor | - |
+| contributions | everyone | authenticated | contributor | - |
 | branches | authenticated | director | director | director |
 | scene_edges | authenticated | director | director | director |
 | cuts | authenticated | director | director | director |
 | decision_events | authenticated | actor | - | - |
 
+**Let op:** `decision_events` is append-only (geen UPDATE/DELETE).
+
 ---
 
-## APPENDIX C: Changelog
+## 12. TESTING CHECKLIST
 
-### 30-12-2024
-- **Types centralisatie**: Nieuwe `src/types/` folder met centrale type definities
-- **Database cleanup**: Verwijderd 4 lege test-projecten zonder branches
-- **Schema cleanup**: Dropped deprecated `forks` tabel
-- **Code quality**: Components importeren nu uit `@/types` ipv lokale type definities
+### Na Elke Refactor
+
+- [ ] `npm run build` slaagt
+- [ ] Browse `/projects` laadt
+- [ ] Project detail laadt met scenes
+- [ ] Contribution indienen werkt
+- [ ] Accept contribution werkt
+- [ ] Fork contribution werkt
+- [ ] Decision log toont events
+- [ ] Lineage tree toont forks
+
+### Console Errors (Mogen Niet Voorkomen)
+
+- `Could not embed because more than one relationship` → FK ambiguity
+- `Cannot read property 'username' of null` → Null check missing
+- `profiles is not a function` → Verkeerde query syntax
+
+---
+
+## APPENDIX A: Migraties
+
+| Datum | Naam | Wijziging |
+|-------|------|-----------|
+| 29-12-2024 | `create_graph_schema` | branches, scene_edges, cuts tabellen |
+| 29-12-2024 | `backfill_graph_data` | Data migratie naar graph model |
+| 30-12-2024 | `drop_deprecated_forks_table` | Verwijder oude forks tabel |
+
+---
+
+## APPENDIX B: Changelog
+
+### 30-12-2024 (Avond)
+- **Data centralisatie**: `projectLoader.ts` + `decisions.ts`
+- **page.tsx**: 340 → 179 regels (-47%)
+- **Guards**: Safety checks in handleAccept/handleFork
+
+### 30-12-2024 (Middag)
+- **JSX extraction**: ProjectHeader, SceneTimeline, PendingContributions
+- **page.tsx**: 388 → 316 regels
+
+### 30-12-2024 (Ochtend)
+- **Types centralisatie**: `src/types/` folder
+- **Database cleanup**: 4 test projecten, forks tabel
 
 ### 29-12-2024
-- **Graph schema**: Nieuw branching model met `branches`, `scene_edges`, `cuts`
-- **Fork lineage**: Toegevoegd aan `projects` tabel
-- **Decision tracking**: Nieuwe `decision_events` tabel voor audit trail
+- **Graph schema**: branches, scene_edges, cuts
+- **Fork lineage**: Columns toegevoegd aan projects
+- **Decision tracking**: decision_events tabel
 
 ---
 
-*Document laatst bijgewerkt: 30 december 2024*
+## APPENDIX C: Contacten & Resources
+
+- **Repository:** https://github.com/MinakamiMario/MakeMoviesAI
+- **Live:** https://app.makemoviesai.com
+- **Supabase:** Project ID `dicdmlcrhnunhgltiabg`
+- **Vercel:** Auto-deploy vanuit `main` branch
+
+---
+
+*Document laatst bijgewerkt: 30 december 2024, 03:30*
