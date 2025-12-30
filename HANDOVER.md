@@ -2,6 +2,24 @@
 
 ## Recent Updates
 
+### 2025-12-30: handle_new_user Input Normalization
+
+**Function:** `public.handle_new_user()`
+
+**Change:** Added TRIM/NULLIF to username extraction  
+**Reason:** Prevents whitespace-only strings (e.g., `"   "`) from being treated as valid usernames  
+**Migration:** `normalize_username_input.sql`  
+**Impact:** Small change, no breaking changes for existing users
+
+**Updated logic:**
+```sql
+v_username := NULLIF(TRIM(NEW.raw_user_meta_data->>'username'), '');
+IF v_username IS NOT NULL THEN
+  -- Try insert with normalized username
+```
+
+---
+
 ### 2025-12-30: handle_new_user Function Hardened
 
 **Function:** `public.handle_new_user()`
@@ -77,9 +95,44 @@
 
 ---
 
-## Migration Applied
+## Production Verification
 
-**File:** `harden_handle_new_user_function.sql`  
+**Status Check (2025-12-30):**
+- Trigger enabled: `tgenabled='O'` (active)
+- No orphaned users observed: `users_without_profile=0` (current state)
+- All existing users have profiles (verified via join)
+- Trigger path verified: Active end-to-end
+
+**Verification queries:**
+```sql
+-- Check trigger status
+SELECT tgenabled FROM pg_trigger WHERE tgname = 'on_auth_user_created';
+
+-- Check for orphaned users
+SELECT COUNT(*) FROM auth.users u 
+LEFT JOIN public.profiles p ON u.id = p.id 
+WHERE p.id IS NULL;
+
+-- Verify signups have profiles (PII-free)
+SELECT 
+  u.created_at,
+  LEFT(u.id::text, 8) || '...' as user_id_prefix,
+  p.username,
+  CASE WHEN p.id IS NOT NULL THEN 'YES' ELSE 'NO' END as has_profile
+FROM auth.users u
+LEFT JOIN public.profiles p ON p.id = u.id
+ORDER BY u.created_at DESC
+LIMIT 10;
+```
+
+---
+
+## Migrations Applied
+
+**Files:**
+1. `harden_handle_new_user_function.sql` - Initial hardening (search_path, nested exceptions, idempotency)
+2. `normalize_username_input.sql` - Input normalization (TRIM/NULLIF)
+
 **Applied:** 2025-12-30  
 **Status:** Deployed to production
 
