@@ -91,19 +91,12 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   };
 
   const handleFork = async (contribution: Contribution) => {
-    if (!user || !project || !branch) {
-      console.error('handleFork: missing required state');
+    if (!user) {
+      console.error('handleFork: not authenticated');
       return;
     }
 
-    const result = await forkContribution(
-      supabase,
-      project,
-      branch,
-      contribution,
-      scenes,
-      user.id
-    );
+    const result = await forkContribution(supabase, contribution);
 
     if (!result.success) {
       console.error('handleFork failed:', result.error);

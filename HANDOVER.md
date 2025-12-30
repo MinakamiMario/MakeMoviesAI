@@ -82,7 +82,7 @@ src/
 │   │   └── server.ts               # Server Supabase client
 │   ├── graph.ts                    # Graph traversal utilities
 │   ├── projectLoader.ts            # Data fetching (alle reads)
-│   └── decisions.ts                # Mutations (accept/fork)
+│   └── decisions.ts                # Mutations (accept via client, fork via RPC)
 │
 └── types/                          # Centrale type definities
     ├── index.ts                    # Barrel export
@@ -188,11 +188,39 @@ Mutations voor contribution beslissingen.
 type AcceptResult = { success: boolean; sceneId?: string; error?: string };
 type ForkResult = { success: boolean; newProjectId?: string; error?: string };
 
-async function acceptContribution(...): Promise<AcceptResult>
-async function forkContribution(...): Promise<ForkResult>
+async function acceptContribution(...): Promise<AcceptResult>  // Client-side
+async function forkContribution(...): Promise<ForkResult>      // Via RPC
 ```
 
-**Belangrijk:** Beide functies loggen automatisch naar `decision_events`.
+**Accept:** Client-side mutation (director adds scene + edge).
+**Fork:** Server-side RPC voor atomische operatie (zie hieronder).
+
+### `public.fork_contribution(p_contribution_id UUID)` (Supabase RPC)
+
+Server-side functie voor fork operaties. **SECURITY DEFINER** - bypasst RLS.
+
+```sql
+-- Input: contribution UUID
+-- Output: new project UUID (of EXCEPTION bij fout)
+-- Auth: alleen director van source project
+-- Atomiciteit: volledige rollback bij elke fout
+```
+
+**Waarom RPC ipv client-side:**
+- Fork maakt project met `director_id = contributor` (niet caller)
+- RLS zou dit blokkeren (`auth.uid() != director_id`)
+- RPC draait met elevated permissions
+- Atomisch: geen half-geforkede projecten
+
+**Stappen in RPC:**
+1. Lock contribution (`FOR UPDATE`)
+2. Valideer: exists, status = pending
+3. Auth check: caller = director
+4. Create project, branch, cut
+5. Copy scenes + edges
+6. Add contribution als laatste scene
+7. Update contribution status
+8. Log decision_event
 
 ### `src/lib/graph.ts`
 
@@ -431,6 +459,14 @@ import './Component.css';
 
 **Let op:** `decision_events` is append-only (geen UPDATE/DELETE).
 
+### RPC Functions
+
+| Function | Auth | Permissions |
+|----------|------|-------------|
+| `fork_contribution(uuid)` | authenticated | SECURITY DEFINER (bypasst RLS) |
+
+**fork_contribution:** Alleen callable door director van source project. Interne auth check via `projects.director_id = auth.uid()`.
+
 ---
 
 ## 12. TESTING CHECKLIST
@@ -461,10 +497,16 @@ import './Component.css';
 | 29-12-2024 | `create_graph_schema` | branches, scene_edges, cuts tabellen |
 | 29-12-2024 | `backfill_graph_data` | Data migratie naar graph model |
 | 30-12-2024 | `drop_deprecated_forks_table` | Verwijder oude forks tabel |
+| 30-12-2024 | `add_fork_contribution_rpc` | Server-side fork RPC met SECURITY DEFINER |
 
 ---
 
 ## APPENDIX B: Changelog
+
+### 30-12-2024 (Middag)
+- **Fork RPC**: Server-side `fork_contribution()` met SECURITY DEFINER
+- **RLS fix**: Fork werkte niet door `director_id != auth.uid()` conflict
+- **decisions.ts**: Fork logic verplaatst naar server (201 → 113 regels)
 
 ### 30-12-2024 (Avond)
 - **Data centralisatie**: `projectLoader.ts` + `decisions.ts`
@@ -495,4 +537,4 @@ import './Component.css';
 
 ---
 
-*Document laatst bijgewerkt: 30 december 2024, 03:30*
+*Document laatst bijgewerkt: 30 december 2024, 12:45*
