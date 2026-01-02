@@ -22,6 +22,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [branch, setBranch] = useState<BranchData | null>(null);
   const [forkedFrom, setForkedFrom] = useState<ForkOrigin | null>(null);
   const [forkCount, setForkCount] = useState(0);
+  const [forkDepth, setForkDepth] = useState<number | null>(null);
+  const [forkCountLabel, setForkCountLabel] = useState<string | null>(null);
+  const [forkPointLabel, setForkPointLabel] = useState<string | null>(null);
+  const [forkedByLabel, setForkedByLabel] = useState<string | null>(null);
+  const [forkedAtLabel, setForkedAtLabel] = useState<string | null>(null);
   const [isDirector, setIsDirector] = useState(false);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +56,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     setBranch(data.branch);
     setForkedFrom(data.forkedFrom);
     setForkCount(data.forkCount);
+    setForkDepth(data.forkDepth);
+    setForkCountLabel(data.forkCountLabel);
+    setForkPointLabel(data.forkPointLabel);
+    setForkedByLabel(data.forkedByLabel);
+    setForkedAtLabel(data.forkedAtLabel);
     setIsDirector(data.isDirector);
     setLoading(false);
   };
@@ -136,6 +146,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           project={project}
           forkedFrom={forkedFrom}
           forkCount={forkCount}
+          forkDepth={forkDepth}
+          forkCountLabel={forkCountLabel}
+          forkPointLabel={forkPointLabel}
+          forkedByLabel={forkedByLabel}
+          forkedAtLabel={forkedAtLabel}
         />
 
         <SceneTimeline

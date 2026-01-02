@@ -1,0 +1,145 @@
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.12);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+
+.pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.pill:focus {
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.12);
+}
+
+.pill[data-type="fork"] {
+  background: rgba(255, 193, 7, 0.18);
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.pill[data-type="main"] {
+  background: rgba(13, 202, 240, 0.14);
+  border-color: rgba(13, 202, 240, 0.3);
+}
+
+.badge {
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.compact {
+  font-size: 0.85rem;
+  opacity: 0.95;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sep {
+  opacity: 0.6;
+}
+
+.originLink {
+  text-decoration: underline;
+  font-weight: 600;
+  color: inherit;
+}
+
+.originLink:hover {
+  opacity: 0.8;
+}
+
+.originText {
+  font-weight: 600;
+  color: inherit;
+}
+
+.details {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 260px;
+  max-width: 340px;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: white;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  z-index: 50;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.detailRow:last-of-type {
+  margin-bottom: 0;
+}
+
+.detailKey {
+  font-size: 0.8rem;
+  opacity: 0.65;
+  white-space: nowrap;
+}
+
+.detailVal {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.detailLink {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+  color: inherit;
+  text-align: right;
+}
+
+.detailLink:hover {
+  opacity: 0.8;
+}
+
+.treeBtn {
+  margin-top: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(0,0,0,0.04);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.treeBtn:hover {
+  background: rgba(0,0,0,0.08);
+}

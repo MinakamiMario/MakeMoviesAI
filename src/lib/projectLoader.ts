@@ -11,6 +11,12 @@ import {
   getBranchEdges,
   buildSceneOrder,
 } from '@/lib/graph';
+import {
+  getForkCountLabelCapped,
+  getForkDepth,
+  formatForkPoint,
+  formatRelativeTime,
+} from './lineageHelpers';
 
 export type ProjectPageData = {
   project: Project;
@@ -19,6 +25,11 @@ export type ProjectPageData = {
   branch: BranchData | null;
   forkedFrom: ForkOrigin | null;
   forkCount: number;
+  forkDepth: number | null;
+  forkCountLabel: string | null;
+  forkPointLabel: string | null;
+  forkedByLabel: string | null;
+  forkedAtLabel: string | null;
   isDirector: boolean;
 };
 
@@ -96,6 +107,36 @@ export async function loadProjectData(
     .select('*', { count: 'exact', head: true })
     .eq('forked_from_project_id', projectId);
 
+  // NEW: Fork depth (only for forks)
+  let forkDepth: number | null = null;
+  if (project.forked_from_project_id) {
+    forkDepth = await getForkDepth(supabase, projectId);
+  }
+
+  // NEW: Fork count label (capped query)
+  const forkCountLabel = await getForkCountLabelCapped(supabase, projectId);
+
+  // NEW: Fork point label
+  let forkPointLabel: string | null = null;
+  if (project.forked_at_scene_id && scenes.length > 0) {
+    const forkScene = scenes.find(s => s.id === project.forked_at_scene_id);
+    if (forkScene) {
+      forkPointLabel = formatForkPoint(forkScene.scene_order, scenes.length);
+    }
+  }
+
+  // NEW: Forked by label
+  let forkedByLabel: string | null = null;
+  if (project.forked_by && project.profiles) {
+    forkedByLabel = `@${project.profiles.username}`;
+  }
+
+  // NEW: Forked at label
+  let forkedAtLabel: string | null = null;
+  if (project.created_at) {
+    forkedAtLabel = formatRelativeTime(project.created_at);
+  }
+
   return {
     project,
     scenes,
@@ -103,6 +144,11 @@ export async function loadProjectData(
     branch,
     forkedFrom,
     forkCount: count || 0,
+    forkDepth,
+    forkCountLabel,
+    forkPointLabel,
+    forkedByLabel,
+    forkedAtLabel,
     isDirector,
   };
 }
