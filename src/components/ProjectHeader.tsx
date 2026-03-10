@@ -3,6 +3,7 @@
 
 'use client';
 
+import Link from 'next/link';
 import { Project, ForkOrigin } from '@/types';
 import LineagePill from './LineagePill';
 import styles from './ProjectHeader.module.css';
@@ -50,7 +51,14 @@ export default function ProjectHeader({
       <span className={styles.label}>Project</span>
       <h1>{project.title}</h1>
       <p className={styles.director}>
-        Directed by <span>@{project.profiles?.username}</span>
+        Directed by{' '}
+        {project.profiles?.username ? (
+          <Link href={`/users/${project.profiles.username}`}>
+            @{project.profiles.username}
+          </Link>
+        ) : (
+          <span>unknown</span>
+        )}
       </p>
       
       {/* REMOVED: Old fork text - now handled by LineagePill

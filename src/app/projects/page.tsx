@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -17,24 +17,56 @@ type Project = {
   };
 };
 
+type SortOption = 'newest' | 'oldest' | 'title';
+
 export default function Projects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<SortOption>('newest');
+  const [searching, setSearching] = useState(false);
   const supabase = createClient();
 
-  useEffect(() => {
-    const loadProjects = async () => {
-      const { data: projects } = await supabase
-        .from('projects')
-        .select('*, profiles!director_id(username)')
-        .order('created_at', { ascending: false });
+  const loadProjects = useCallback(async (search: string, sortBy: SortOption) => {
+    setSearching(true);
 
-      setProjects(projects || []);
-      setLoading(false);
-    };
+    let q = supabase
+      .from('projects')
+      .select('*, profiles!director_id(username)');
 
-    loadProjects();
+    if (search.trim()) {
+      q = q.or(`title.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`);
+    }
+
+    if (sortBy === 'newest') {
+      q = q.order('created_at', { ascending: false });
+    } else if (sortBy === 'oldest') {
+      q = q.order('created_at', { ascending: true });
+    } else {
+      q = q.order('title', { ascending: true });
+    }
+
+    const { data } = await q;
+    setProjects(data || []);
+    setSearching(false);
+    setLoading(false);
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadProjects('', 'newest');
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadProjects(query, sort);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, sort]);
+
+  const resultCount = projects.length;
+  const hasSearch = query.trim().length > 0;
 
   return (
     <main className={styles.main}>
@@ -44,6 +76,33 @@ export default function Projects() {
         <h1>Browse projects</h1>
         <p className={styles.subtitle}>Find a film to contribute to</p>
 
+        <div className={styles.searchBar}>
+          <input
+            type="text"
+            placeholder="Search projects..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className={styles.searchInput}
+            aria-label="Search projects"
+          />
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortOption)}
+            className={styles.sortSelect}
+            aria-label="Sort projects"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="title">A — Z</option>
+          </select>
+        </div>
+
+        {hasSearch && !loading && (
+          <p className={styles.resultCount}>
+            {searching ? 'Searching...' : `${resultCount} project${resultCount !== 1 ? 's' : ''} found`}
+          </p>
+        )}
+
         {loading ? (
           <div className={styles.grid}>
             {Array.from({ length: 6 }).map((_, i) => (
@@ -52,10 +111,21 @@ export default function Projects() {
           </div>
         ) : projects.length === 0 ? (
           <div className={styles.empty}>
-            <p>No projects yet.</p>
-            <Link href="/projects/new">
-              <Button>Start the first one</Button>
-            </Link>
+            {hasSearch ? (
+              <>
+                <p>No projects match &ldquo;{query}&rdquo;</p>
+                <Button variant="ghost" onClick={() => setQuery('')}>
+                  Clear search
+                </Button>
+              </>
+            ) : (
+              <>
+                <p>No projects yet.</p>
+                <Link href="/projects/new">
+                  <Button>Start the first one</Button>
+                </Link>
+              </>
+            )}
           </div>
         ) : (
           <div className={styles.grid}>
@@ -67,7 +137,18 @@ export default function Projects() {
               >
                 <h2>{project.title}</h2>
                 <p className={styles.director}>
-                  by @{project.profiles?.username}
+                  by{' '}
+                  <span
+                    onClick={(e) => {
+                      if (project.profiles?.username) {
+                        e.preventDefault();
+                        window.location.href = `/users/${project.profiles.username}`;
+                      }
+                    }}
+                    className={styles.usernameLink}
+                  >
+                    @{project.profiles?.username}
+                  </span>
                 </p>
                 {project.description && (
                   <p className={styles.description}>{project.description}</p>

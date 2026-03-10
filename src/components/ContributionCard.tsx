@@ -1,6 +1,7 @@
 'use client';
 
 import { KeyboardEvent } from 'react';
+import Link from 'next/link';
 import { Contribution } from '@/types';
 import styles from './ContributionCard.module.css';
 
@@ -75,9 +76,17 @@ export default function ContributionCard({
       <div className={styles.content}>
         <h4 className={styles.title}>{contribution.title}</h4>
         <div className={styles.meta}>
-          <span className={styles.contributor}>
-            @{contribution.profiles?.username}
-          </span>
+          {contribution.profiles?.username ? (
+            <Link
+              href={`/users/${contribution.profiles.username}`}
+              className={styles.contributor}
+              onClick={(e) => e.stopPropagation()}
+            >
+              @{contribution.profiles.username}
+            </Link>
+          ) : (
+            <span className={styles.contributor}>@unknown</span>
+          )}
           <span className={styles.separator}>·</span>
           <span className={styles.date}>{formatDate(contribution.created_at)}</span>
         </div>

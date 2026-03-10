@@ -13,12 +13,23 @@ type Props = {
 
 export default function Navbar({ showNav = true }: Props) {
   const [user, setUser] = useState<{ id: string } | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => setUser(user));
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      setUser(user);
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.id)
+          .single();
+        if (data) setUsername(data.username);
+      }
+    });
   }, []);
 
   // Close menu on route change (resize)
@@ -60,6 +71,11 @@ export default function Navbar({ showNav = true }: Props) {
                 <Link href="/dashboard" className={styles.navLink} onClick={() => setMenuOpen(false)}>
                   Dashboard
                 </Link>
+                {username && (
+                  <Link href={`/users/${username}`} className={styles.navLink} onClick={() => setMenuOpen(false)}>
+                    Profile
+                  </Link>
+                )}
                 <button className={styles.signOutBtn} onClick={handleSignOut}>
                   Sign out
                 </button>

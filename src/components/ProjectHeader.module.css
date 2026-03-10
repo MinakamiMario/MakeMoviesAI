@@ -20,8 +20,14 @@
   font-size: var(--text-base);
 }
 
-.director span {
+.director span,
+.director a {
   color: var(--accent);
+  text-decoration: none;
+}
+
+.director a:hover {
+  text-decoration: underline;
 }
 
 .forkedFrom {
