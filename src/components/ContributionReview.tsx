@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Contribution, Scene } from '@/types';
+import VideoPlayer from './VideoPlayer';
 import styles from './ContributionReview.module.css';
 
 type Props = {
@@ -46,9 +47,9 @@ export default function ContributionReview({
   const renderMedia = (url: string | null, alt: string) => {
     if (!url) return <div className={styles.noMedia}>No media</div>;
 
-    const isVideo = url.match(/\.(mp4|webm|mov)$/i);
+    const isVideo = url.match(/\.(mp4|webm|mov|m3u8)$/i);
     if (isVideo) {
-      return <video src={url} controls className={styles.media} />;
+      return <VideoPlayer src={url} alt={alt} className={styles.media} />;
     }
     return <img src={url} alt={alt} className={styles.media} />;
   };

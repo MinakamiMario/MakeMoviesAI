@@ -86,9 +86,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
       supabase,
       params.id,
       branch,
-      contribution,
-      scenes,
-      user.id
+      contribution
     );
 
     if (!result.success) {

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Scene } from '@/types';
+import VideoPlayer from './VideoPlayer';
 import styles from './SceneTimeline.module.css';
 
 type Props = {
@@ -40,8 +41,11 @@ export default function SceneTimeline({
               <div className={styles.sceneContent}>
                 {scene.media_url && (
                   <div className={styles.sceneMedia}>
-                    {scene.media_url.match(/\.(mp4|webm|mov)$/i) ? (
-                      <video src={scene.media_url} controls />
+                    {scene.media_url.match(/\.(mp4|webm|mov|m3u8)$/i) ? (
+                      <VideoPlayer
+                        src={scene.media_url}
+                        alt={scene.title}
+                      />
                     ) : (
                       <img src={scene.media_url} alt={scene.title} />
                     )}
