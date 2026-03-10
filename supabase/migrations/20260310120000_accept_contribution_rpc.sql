@@ -15,6 +15,7 @@ CREATE OR REPLACE FUNCTION public.accept_contribution(
 RETURNS UUID
 LANGUAGE plpgsql
 SECURITY INVOKER
+SET search_path = ''
 SET statement_timeout = '5s'
 AS $$
 DECLARE
