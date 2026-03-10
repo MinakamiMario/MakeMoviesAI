@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 import MediaUpload from '@/components/MediaUpload';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
@@ -121,9 +122,7 @@ export default function AddScene({ params }: { params: { id: string } }) {
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.logo}>MakeMovies</Link>
-      </header>
+      <Navbar showNav={false} />
 
       <div className={styles.content}>
         <h1>Add scene</h1>

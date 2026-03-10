@@ -2,60 +2,49 @@
   min-height: 100vh;
 }
 
-.header {
-  padding: 24px;
-  border-bottom: 1px solid var(--border);
-}
-
-.logo {
-  font-size: 14px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
 .content {
   max-width: 600px;
   margin: 0 auto;
-  padding: 48px 24px;
+  padding: var(--space-2xl) var(--space-lg);
 }
 
 .content h1 {
-  font-size: 28px;
+  font-size: var(--text-2xl);
   font-weight: 300;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-xs);
 }
 
 .subtitle {
   color: var(--text-secondary);
-  margin-bottom: 48px;
+  margin-bottom: var(--space-2xl);
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-lg);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .field label {
-  font-size: 14px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .field input,
 .field textarea {
-  padding: 16px;
-  font-size: 16px;
+  padding: var(--space-md);
+  font-size: 16px; /* 16px prevents iOS zoom */
   background-color: var(--bg-secondary);
   border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-  transition: border-color 0.2s ease;
+  transition: border-color var(--transition-base);
   resize: vertical;
 }
 
@@ -67,50 +56,38 @@
 
 .field input::placeholder,
 .field textarea::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
 }
 
 .actions {
   display: flex;
-  gap: 16px;
+  gap: var(--space-md);
   justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.cancelBtn {
-  padding: 16px 24px;
-  font-size: 14px;
-  color: var(--text-secondary);
-  background: none;
-  border: 1px solid var(--border);
-}
-
-.cancelBtn:hover {
-  border-color: var(--text-secondary);
-  opacity: 1;
-}
-
-.submitBtn {
-  padding: 16px 24px;
-  font-size: 14px;
-  font-weight: 500;
-  background-color: var(--accent);
-  color: var(--bg-primary);
-  border: none;
-}
-
-.submitBtn:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.submitBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  margin-top: var(--space-md);
 }
 
 .error {
-  padding: 12px 16px;
-  background-color: var(--error);
-  color: var(--text-primary);
-  font-size: 14px;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--error-bg);
+  color: var(--error);
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .content h1 {
+    font-size: var(--text-xl);
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions > * {
+    width: 100%;
+  }
 }

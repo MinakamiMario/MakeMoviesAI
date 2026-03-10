@@ -1,37 +1,37 @@
 .card {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
+  gap: var(--space-md);
+  padding: var(--space-sm);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  min-height: 44px;
 }
 
 .card:hover {
-  background: #222;
-  border-color: #3a3a3a;
+  background: var(--bg-secondary);
+  border-color: var(--border-hover);
 }
 
 .card:focus {
   outline: none;
-  border-color: #7dd3fc;
-  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.2);
+  box-shadow: var(--focus-ring);
 }
 
 .ownSubmission {
-  border-left: 3px solid #7dd3fc;
+  border-left: 3px solid var(--accent);
 }
 
 .thumbnailContainer {
   flex-shrink: 0;
   width: 80px;
   height: 56px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
-  background: #111;
+  background: var(--bg-secondary);
 }
 
 .thumbnail {
@@ -43,7 +43,7 @@
 .noThumbnail {
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
 }
 
 .content {
@@ -52,10 +52,10 @@
 }
 
 .title {
-  margin: 0 0 0.25rem;
-  font-size: 0.95rem;
+  margin: 0 0 var(--space-xs);
+  font-size: var(--text-base);
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -65,42 +65,49 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.8rem;
-  color: #888;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .contributor {
-  color: #aaa;
+  color: var(--text-secondary);
 }
 
 .separator {
-  color: #555;
+  color: var(--text-tertiary);
 }
 
 .date {
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .badge {
   display: inline-block;
-  margin-top: 0.35rem;
-  padding: 0.15rem 0.4rem;
+  margin-top: var(--space-xs);
+  padding: 2px 6px;
   font-size: 0.7rem;
   font-weight: 500;
   text-transform: uppercase;
-  background: rgba(125, 211, 252, 0.15);
-  color: #7dd3fc;
-  border-radius: 3px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
 }
 
 .arrow {
   flex-shrink: 0;
-  font-size: 1.1rem;
-  color: #555;
-  transition: color 0.15s ease, transform 0.15s ease;
+  font-size: var(--text-lg);
+  color: var(--text-tertiary);
+  transition: color var(--transition-fast), transform var(--transition-fast);
 }
 
 .card:hover .arrow {
-  color: #888;
+  color: var(--text-secondary);
   transform: translateX(2px);
+}
+
+@media (max-width: 480px) {
+  .thumbnailContainer {
+    width: 60px;
+    height: 42px;
+  }
 }

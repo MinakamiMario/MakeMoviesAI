@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 import styles from './page.module.css';
 import ProjectHeader from '@/components/ProjectHeader';
 import SceneTimeline from '@/components/SceneTimeline';
@@ -123,13 +124,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <main className={styles.main}>
-        <header className={styles.header}>
-          <Link href="/" className={styles.logo}>MakeMovies</Link>
-          <nav className={styles.nav}>
-            <Skeleton width="3rem" height="1rem" />
-            <Skeleton width="5rem" height="1rem" />
-          </nav>
-        </header>
+        <Navbar />
         <div className={styles.content}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
             <Skeleton width="50%" height="2rem" />
@@ -151,17 +146,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.logo}>MakeMovies</Link>
-        <nav className={styles.nav}>
-          <Link href="/projects">Browse</Link>
-          {user ? (
-            <Link href="/dashboard">Dashboard</Link>
-          ) : (
-            <Link href="/login">Sign in</Link>
-          )}
-        </nav>
-      </header>
+      <Navbar />
 
       <div className={styles.content}>
         <ProjectHeader

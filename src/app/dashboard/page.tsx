@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 import { Button, CardSkeleton } from '@/components/ui';
 import styles from './page.module.css';
 
@@ -15,7 +16,6 @@ type Project = {
 };
 
 export default function Dashboard() {
-  const [user, setUser] = useState<any>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -30,8 +30,6 @@ export default function Dashboard() {
         return;
       }
 
-      setUser(user);
-
       const { data: projects } = await supabase
         .from('projects')
         .select('*')
@@ -45,22 +43,9 @@ export default function Dashboard() {
     getUser();
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
-
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.logo}>MakeMovies</Link>
-        <nav className={styles.nav}>
-          <Link href="/projects">Browse</Link>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            Sign out
-          </Button>
-        </nav>
-      </header>
+      <Navbar />
 
       <div className={styles.content}>
         <div className={styles.titleRow}>

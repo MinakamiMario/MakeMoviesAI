@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
+import { Button } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { createDefaultBranch, createDefaultCut } from '@/lib/graph';
 import styles from './page.module.css';
 
@@ -14,6 +17,7 @@ export default function NewProject() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,7 +42,6 @@ export default function NewProject() {
       return;
     }
 
-    // Create project
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .insert({
@@ -55,7 +58,6 @@ export default function NewProject() {
       return;
     }
 
-    // Create default branch
     const branch = await createDefaultBranch(supabase, project.id, user.id);
     if (!branch) {
       setError('Failed to create project branch');
@@ -63,21 +65,19 @@ export default function NewProject() {
       return;
     }
 
-    // Create default cut
     await createDefaultCut(supabase, project.id, user.id);
 
+    toast.success('Project created!');
     router.push(`/projects/${project.id}`);
   };
 
   return (
     <main className={styles.main}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.logo}>MakeMovies</Link>
-      </header>
+      <Navbar showNav={false} />
 
       <div className={styles.content}>
         <h1>Start a new project</h1>
-        <p className={styles.subtitle}>You'll be the director. Others can contribute.</p>
+        <p className={styles.subtitle}>You&apos;ll be the director. Others can contribute.</p>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           {error && <p className={styles.error}>{error}</p>}
@@ -106,12 +106,12 @@ export default function NewProject() {
           </div>
 
           <div className={styles.actions}>
-            <Link href="/dashboard" className={styles.cancelBtn}>
-              Cancel
+            <Link href="/dashboard">
+              <Button variant="ghost" type="button">Cancel</Button>
             </Link>
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? 'Creating...' : 'Create project'}
-            </button>
+            <Button type="submit" loading={loading}>
+              Create project
+            </Button>
           </div>
         </form>
       </div>

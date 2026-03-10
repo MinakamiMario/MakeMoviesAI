@@ -9,50 +9,54 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 80px 24px;
+  padding: 80px var(--space-lg);
   max-width: 800px;
   margin: 0 auto;
 }
 
 .logo {
-  font-size: 14px;
+  font-size: var(--text-sm);
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--text-secondary);
-  margin-bottom: 48px;
+  margin-bottom: var(--space-2xl);
 }
 
 .tagline {
   font-size: clamp(36px, 8vw, 64px);
   font-weight: 300;
   line-height: 1.1;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
 }
 
 .subtitle {
-  font-size: 20px;
+  font-size: var(--text-xl);
   color: var(--text-secondary);
   font-weight: 300;
-  margin-bottom: 48px;
+  margin-bottom: var(--space-2xl);
 }
 
 .actions {
   display: flex;
-  gap: 16px;
+  gap: var(--space-md);
   flex-wrap: wrap;
 }
 
 .primaryBtn {
-  display: inline-block;
-  padding: 16px 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-xl);
   background-color: var(--accent);
   color: var(--bg-primary);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
   letter-spacing: 1px;
   text-transform: uppercase;
   border: none;
-  transition: background-color 0.2s ease;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-base);
+  min-height: 44px;
 }
 
 .primaryBtn:hover {
@@ -61,19 +65,41 @@
 }
 
 .secondaryBtn {
-  display: inline-block;
-  padding: 16px 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md) var(--space-xl);
   background-color: transparent;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--text-sm);
   font-weight: 500;
   letter-spacing: 1px;
   text-transform: uppercase;
   border: 1px solid var(--border);
-  transition: border-color 0.2s ease;
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-base);
+  min-height: 44px;
 }
 
 .secondaryBtn:hover {
   border-color: var(--text-secondary);
   opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: var(--space-2xl) var(--space-md);
+    justify-content: flex-start;
+    padding-top: 30vh;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    width: 100%;
+    text-align: center;
+  }
 }
