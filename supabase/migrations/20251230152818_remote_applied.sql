@@ -1,0 +1,5 @@
+-- NOTE:
+-- This migration version exists on the remote Supabase database but was not
+-- previously committed to this repository.
+-- We keep this file to sync local migration history with remote.
+-- Do not edit past migrations; add new timestamp migrations going forward.
