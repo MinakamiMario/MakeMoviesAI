@@ -11,7 +11,7 @@ import styles from './page.module.css';
 type Profile = {
   id: string;
   username: string;
-  display_name: string | null;
+  avatar_url: string | null;
   created_at: string;
 };
 
@@ -44,7 +44,7 @@ export default function UserProfile() {
       // Fetch profile by username
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, username, display_name, created_at')
+        .select('id, username, avatar_url, created_at')
         .eq('username', username)
         .single();
 
@@ -138,13 +138,10 @@ export default function UserProfile() {
         {/* Profile header */}
         <section className={styles.profileHeader}>
           <div className={styles.avatar}>
-            {(profile?.display_name || profile?.username || '?')[0].toUpperCase()}
+            {(profile?.username || '?')[0].toUpperCase()}
           </div>
           <div>
-            {profile?.display_name && (
-              <h1 className={styles.displayName}>{profile.display_name}</h1>
-            )}
-            <p className={styles.username}>@{profile?.username}</p>
+            <h1 className={styles.displayName}>@{profile?.username}</h1>
             <p className={styles.joined}>
               Joined {profile?.created_at ? formatDate(profile.created_at) : ''}
             </p>
