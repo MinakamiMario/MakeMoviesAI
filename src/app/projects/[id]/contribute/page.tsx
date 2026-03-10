@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaUpload from '@/components/MediaUpload';
+import { Button } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { getDefaultBranch, getBranchEdges, findLastSceneId } from '@/lib/graph';
 import styles from '../add-scene/page.module.css';
 
@@ -18,6 +20,7 @@ export default function Contribute({ params }: { params: { id: string } }) {
   const [parentSceneId, setParentSceneId] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -82,8 +85,10 @@ export default function Contribute({ params }: { params: { id: string } }) {
 
     if (error) {
       setError(error.message);
+      toast.error(error.message);
       setLoading(false);
     } else {
+      toast.success('Contribution submitted!');
       router.push(`/projects/${params.id}`);
     }
   };
@@ -130,12 +135,12 @@ export default function Contribute({ params }: { params: { id: string } }) {
           </div>
 
           <div className={styles.actions}>
-            <Link href={`/projects/${params.id}`} className={styles.cancelBtn}>
-              Cancel
+            <Link href={`/projects/${params.id}`}>
+              <Button variant="ghost" type="button">Cancel</Button>
             </Link>
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit'}
-            </button>
+            <Button type="submit" loading={loading}>
+              Submit
+            </Button>
           </div>
         </form>
       </div>

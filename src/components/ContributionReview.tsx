@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Contribution, Scene } from '@/types';
 import VideoPlayer from './VideoPlayer';
+import { Button } from './ui';
 import styles from './ContributionReview.module.css';
 
 type Props = {
@@ -160,12 +161,12 @@ export default function ContributionReview({
 
         {isDirector && (
           <footer className={styles.footer}>
-            <button className={styles.forkButton} onClick={onFork}>
+            <Button variant="secondary" onClick={onFork}>
               Fork
-            </button>
-            <button className={styles.acceptButton} onClick={onAccept}>
+            </Button>
+            <Button variant="primary" onClick={onAccept}>
               Accept
-            </button>
+            </Button>
           </footer>
         )}
       </div>

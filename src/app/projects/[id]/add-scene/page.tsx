@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MediaUpload from '@/components/MediaUpload';
+import { Button } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { BranchData } from '@/types';
 import {
   getDefaultBranch,
@@ -25,6 +27,7 @@ export default function AddScene({ params }: { params: { id: string } }) {
   const [lastSceneId, setLastSceneId] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -107,10 +110,12 @@ export default function AddScene({ params }: { params: { id: string } }) {
 
     if (!edgeResult.success) {
       setError(edgeResult.error || 'Failed to create edge');
+      toast.error(edgeResult.error || 'Failed to add scene');
       setLoading(false);
       return;
     }
 
+    toast.success('Scene added!');
     router.push(`/projects/${params.id}`);
   };
 
@@ -156,12 +161,12 @@ export default function AddScene({ params }: { params: { id: string } }) {
           </div>
 
           <div className={styles.actions}>
-            <Link href={`/projects/${params.id}`} className={styles.cancelBtn}>
-              Cancel
+            <Link href={`/projects/${params.id}`}>
+              <Button variant="ghost" type="button">Cancel</Button>
             </Link>
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? 'Adding...' : 'Add scene'}
-            </button>
+            <Button type="submit" loading={loading}>
+              Add scene
+            </Button>
           </div>
         </form>
       </div>

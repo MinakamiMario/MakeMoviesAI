@@ -11,6 +11,8 @@ import PendingContributions from '@/components/PendingContributions';
 import DecisionLog from '@/components/DecisionLog';
 import LineageTree from '@/components/LineageTree';
 import ContributionReview from '@/components/ContributionReview';
+import { Skeleton, SceneSkeleton } from '@/components/ui';
+import { useToast } from '@/components/ui/Toast';
 import { Scene, Contribution, ForkOrigin, BranchData, Project } from '@/types';
 import { loadProjectData } from '@/lib/projectLoader';
 import { acceptContribution, forkContribution } from '@/lib/decisions';
@@ -34,6 +36,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   useEffect(() => {
     loadData();
@@ -90,10 +93,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     );
 
     if (!result.success) {
-      console.error('handleAccept failed:', result.error);
+      toast.error(result.error || 'Failed to accept contribution');
       return;
     }
 
+    toast.success('Contribution accepted — new scene added!');
     setSelectedContribution(null);
     loadData();
   };
@@ -107,10 +111,11 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     const result = await forkContribution(supabase, contribution);
 
     if (!result.success) {
-      console.error('handleFork failed:', result.error);
+      toast.error(result.error || 'Failed to fork contribution');
       return;
     }
 
+    toast.success('Forked! A new project has been created.');
     setSelectedContribution(null);
     loadData();
   };
@@ -118,7 +123,26 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   if (loading) {
     return (
       <main className={styles.main}>
-        <p className={styles.loading}>Loading...</p>
+        <header className={styles.header}>
+          <Link href="/" className={styles.logo}>MakeMovies</Link>
+          <nav className={styles.nav}>
+            <Skeleton width="3rem" height="1rem" />
+            <Skeleton width="5rem" height="1rem" />
+          </nav>
+        </header>
+        <div className={styles.content}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <Skeleton width="50%" height="2rem" />
+            <Skeleton width="80%" height="1rem" />
+            <Skeleton width="30%" height="0.875rem" />
+          </div>
+          <div style={{ marginTop: 'var(--space-2xl)', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+            <Skeleton width="6rem" height="1.5rem" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <SceneSkeleton key={i} />
+            ))}
+          </div>
+        </div>
       </main>
     );
   }

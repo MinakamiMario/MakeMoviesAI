@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Button, CardSkeleton } from '@/components/ui';
 import styles from './page.module.css';
 
 type Project = {
@@ -49,39 +50,37 @@ export default function Dashboard() {
     router.push('/');
   };
 
-  if (loading) {
-    return (
-      <main className={styles.main}>
-        <p>Loading...</p>
-      </main>
-    );
-  }
-
   return (
     <main className={styles.main}>
       <header className={styles.header}>
         <Link href="/" className={styles.logo}>MakeMovies</Link>
         <nav className={styles.nav}>
           <Link href="/projects">Browse</Link>
-          <button onClick={handleLogout} className={styles.logoutBtn}>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
             Sign out
-          </button>
+          </Button>
         </nav>
       </header>
 
       <div className={styles.content}>
         <div className={styles.titleRow}>
           <h1>Your projects</h1>
-          <Link href="/projects/new" className={styles.newBtn}>
-            + New project
+          <Link href="/projects/new">
+            <Button size="md">+ New project</Button>
           </Link>
         </div>
 
-        {projects.length === 0 ? (
+        {loading ? (
+          <div className={styles.grid}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
+          </div>
+        ) : projects.length === 0 ? (
           <div className={styles.empty}>
-            <p>You haven't created any projects yet.</p>
-            <Link href="/projects/new" className={styles.newBtn}>
-              Start your first film
+            <p>You haven&apos;t created any projects yet.</p>
+            <Link href="/projects/new">
+              <Button size="lg">Start your first film</Button>
             </Link>
           </div>
         ) : (
