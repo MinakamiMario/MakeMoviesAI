@@ -16,3 +16,11 @@ export type {
   BranchData,
   EdgeData,
 } from './graph';
+
+// Messaging types
+export type {
+  Conversation,
+  ConversationParticipant,
+  Message,
+  InboxItem,
+} from './messaging';

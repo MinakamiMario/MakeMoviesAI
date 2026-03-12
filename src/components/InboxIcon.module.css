@@ -1,0 +1,37 @@
+.inboxLink {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.inboxLink:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  color: var(--bg-primary);
+  background-color: var(--accent);
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}

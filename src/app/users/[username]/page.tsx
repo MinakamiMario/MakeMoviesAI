@@ -41,6 +41,7 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [contributions, setContributions] = useState<ContributionWithProject[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [projectPage, setProjectPage] = useState(0);
@@ -51,6 +52,10 @@ export default function UserProfile() {
 
   useEffect(() => {
     async function load() {
+      // Get current user for "Message" button visibility
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) setCurrentUserId(currentUser.id);
+
       // Fetch profile by username
       const { data: profileData } = await supabase
         .from('profiles')
@@ -234,6 +239,15 @@ export default function UserProfile() {
             <p className={styles.joined}>
               Joined {profile?.created_at ? formatDate(profile.created_at) : ''}
             </p>
+            {currentUserId && profile && currentUserId !== profile.id && (
+              <Link href={`/inbox/new?to=${profile.username}`} className={styles.messageBtn}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+                Message
+              </Link>
+            )}
           </div>
         </section>
 

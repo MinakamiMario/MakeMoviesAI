@@ -19,8 +19,14 @@ const PROTECTED_PREFIXES = [
   { prefix: '/projects/', suffix: '/contribute' },
 ];
 
+/**
+ * Route prefixes where ALL sub-paths require authentication.
+ */
+const PROTECTED_ROUTE_PREFIXES = ['/inbox'];
+
 function isProtectedRoute(pathname: string): boolean {
   if (PROTECTED_ROUTES.includes(pathname)) return true;
+  if (PROTECTED_ROUTE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))) return true;
   return PROTECTED_PREFIXES.some(
     ({ prefix, suffix }) => pathname.startsWith(prefix) && pathname.endsWith(suffix)
   );
