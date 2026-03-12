@@ -15,6 +15,10 @@ type Profile = {
   username: string;
   avatar_url: string | null;
   created_at: string;
+  reputation_score: number;
+  comment_count: number;
+  contribution_count: number;
+  accepted_count: number;
 };
 
 type Project = {
@@ -50,7 +54,7 @@ export default function UserProfile() {
       // Fetch profile by username
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url, created_at')
+        .select('id, username, avatar_url, created_at, reputation_score, comment_count, contribution_count, accepted_count')
         .eq('username', username)
         .single();
 
@@ -146,6 +150,27 @@ export default function UserProfile() {
 
   const acceptedCount = contributions.filter((c) => c.status === 'accepted').length;
   const forkedCount = contributions.filter((c) => c.status === 'forked').length;
+
+  const getStarCount = (score: number) => {
+    if (score >= 500) return 5;
+    if (score >= 200) return 4;
+    if (score >= 100) return 3;
+    if (score >= 50) return 2;
+    if (score >= 10) return 1;
+    return 0;
+  };
+
+  const getStarLabel = (stars: number) => {
+    if (stars >= 5) return 'Legend';
+    if (stars >= 4) return 'Veteran';
+    if (stars >= 3) return 'Trusted';
+    if (stars >= 2) return 'Active';
+    if (stars >= 1) return 'Rising';
+    return 'Newcomer';
+  };
+
+  const starCount = profile ? getStarCount(profile.reputation_score) : 0;
+  const starLabel = getStarLabel(starCount);
   const projectPages = Math.ceil(projectTotal / PAGE_SIZE);
   const contribPages = Math.ceil(contribTotal / PAGE_SIZE);
 
@@ -197,6 +222,15 @@ export default function UserProfile() {
           </div>
           <div>
             <h1 className={styles.displayName}>@{profile?.username}</h1>
+            {starCount > 0 && (
+              <div className={styles.reputation}>
+                <span className={styles.reputationStars}>
+                  {'★'.repeat(starCount)}{'☆'.repeat(5 - starCount)}
+                </span>
+                <span className={styles.reputationLabel}>{starLabel}</span>
+                <span className={styles.reputationScore}>{profile?.reputation_score} pts</span>
+              </div>
+            )}
             <p className={styles.joined}>
               Joined {profile?.created_at ? formatDate(profile.created_at) : ''}
             </p>
@@ -215,6 +249,12 @@ export default function UserProfile() {
             <span className={styles.statNumber}>{contribTotal}</span>
             <span className={styles.statLabel}>
               {contribTotal === 1 ? 'Contribution' : 'Contributions'}
+            </span>
+          </div>
+          <div className={styles.stat}>
+            <span className={styles.statNumber}>{profile?.comment_count || 0}</span>
+            <span className={styles.statLabel}>
+              {(profile?.comment_count || 0) === 1 ? 'Comment' : 'Comments'}
             </span>
           </div>
           <div className={styles.stat}>

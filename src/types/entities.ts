@@ -6,6 +6,7 @@
 /** Embedded profile data from joins */
 export type ProfileRef = {
   username: string;
+  reputation_score?: number;
 };
 
 /** Project entity */

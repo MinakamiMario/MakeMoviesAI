@@ -83,6 +83,16 @@ export default function ContributionCard({
               onClick={(e) => e.stopPropagation()}
             >
               @{contribution.profiles.username}
+              {(contribution.profiles.reputation_score || 0) >= 10 && (
+                <span className={styles.miniStars} title={`${contribution.profiles.reputation_score} pts`}>
+                  {'★'.repeat(
+                    (contribution.profiles.reputation_score || 0) >= 500 ? 5 :
+                    (contribution.profiles.reputation_score || 0) >= 200 ? 4 :
+                    (contribution.profiles.reputation_score || 0) >= 100 ? 3 :
+                    (contribution.profiles.reputation_score || 0) >= 50 ? 2 : 1
+                  )}
+                </span>
+              )}
             </Link>
           ) : (
             <span className={styles.contributor}>@unknown</span>

@@ -40,7 +40,7 @@ export async function loadProjectData(
 ): Promise<ProjectPageData | null> {
   const { data: projectData } = await supabase
     .from('projects')
-    .select('*, profiles!director_id(username)')
+    .select('*, profiles!director_id(username, reputation_score)')
     .eq('id', projectId)
     .single();
 
@@ -77,7 +77,7 @@ export async function loadProjectData(
     if (orderedSceneIds.length > 0) {
       const { data: scenesData } = await supabase
         .from('scenes')
-        .select('*, profiles!contributor_id(username)')
+        .select('*, profiles!contributor_id(username, reputation_score)')
         .in('id', orderedSceneIds);
 
       const sceneMap = new Map((scenesData || []).map(s => [s.id, s]));
@@ -90,7 +90,7 @@ export async function loadProjectData(
   // Load contributions
   let contributionsQuery = supabase
     .from('contributions')
-    .select('*, profiles!contributor_id(username)')
+    .select('*, profiles!contributor_id(username, reputation_score)')
     .eq('project_id', projectId)
     .eq('status', 'pending');
 

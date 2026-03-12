@@ -71,6 +71,15 @@
 
 .contributor {
   color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.miniStars {
+  font-size: 0.55rem;
+  color: var(--accent);
+  letter-spacing: 0.5px;
 }
 
 .separator {

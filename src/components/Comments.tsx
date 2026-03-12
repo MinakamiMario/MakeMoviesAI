@@ -10,27 +10,60 @@ type Comment = {
   body: string;
   created_at: string;
   author_id: string;
-  profiles: { username: string } | null;
+  profiles: { username: string; reputation_score: number } | null;
 };
+
+function ReputationStars({ score }: { score: number }) {
+  // 0-9: 0 stars, 10-49: 1 star, 50-99: 2 stars, 100-199: 3 stars, 200-499: 4 stars, 500+: 5 stars
+  let stars = 0;
+  if (score >= 500) stars = 5;
+  else if (score >= 200) stars = 4;
+  else if (score >= 100) stars = 3;
+  else if (score >= 50) stars = 2;
+  else if (score >= 10) stars = 1;
+
+  if (stars === 0) return null;
+
+  return (
+    <span className={styles.stars} title={`Reputation: ${score} pts`}>
+      {'★'.repeat(stars)}
+      {'☆'.repeat(5 - stars)}
+    </span>
+  );
+}
 
 export default function Comments({ projectId }: { projectId: string }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [body, setBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [userReputation, setUserReputation] = useState(0);
+  const [focused, setFocused] = useState(false);
   const supabase = createClient();
   const listRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserId(user?.id || null);
+    // Get current user + profile
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (user) {
+        setUserId(user.id);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username, reputation_score')
+          .eq('id', user.id)
+          .single();
+        if (profile) {
+          setUsername(profile.username);
+          setUserReputation(profile.reputation_score || 0);
+        }
+      }
     });
 
-    // Load comments
     loadComments();
 
-    // Real-time subscription
+    // Real-time subscription (now works — publication enabled)
     const channel = supabase
       .channel(`comments:${projectId}`)
       .on(
@@ -67,7 +100,7 @@ export default function Comments({ projectId }: { projectId: string }) {
   async function loadComments() {
     const { data } = await supabase
       .from('comments')
-      .select('id, body, created_at, author_id, profiles!author_id(username)')
+      .select('id, body, created_at, author_id, profiles!author_id(username, reputation_score)')
       .eq('project_id', projectId)
       .order('created_at', { ascending: true });
 
@@ -82,18 +115,55 @@ export default function Comments({ projectId }: { projectId: string }) {
     e.preventDefault();
     if (!body.trim() || !userId || submitting) return;
 
+    const trimmedBody = body.trim();
     setSubmitting(true);
-    await supabase.from('comments').insert({
+
+    // Optimistic update — show comment immediately
+    const optimisticComment: Comment = {
+      id: `optimistic-${Date.now()}`,
+      body: trimmedBody,
+      created_at: new Date().toISOString(),
+      author_id: userId,
+      profiles: { username: username || 'you', reputation_score: userReputation },
+    };
+    setComments((prev) => [...prev, optimisticComment]);
+    setBody('');
+
+    // Scroll to bottom
+    setTimeout(() => {
+      listRef.current?.scrollTo({
+        top: listRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }, 50);
+
+    // Actually insert
+    const { error } = await supabase.from('comments').insert({
       project_id: projectId,
       author_id: userId,
-      body: body.trim(),
+      body: trimmedBody,
     });
-    setBody('');
+
+    if (error) {
+      // Remove optimistic comment on failure
+      setComments((prev) => prev.filter((c) => c.id !== optimisticComment.id));
+      setBody(trimmedBody); // Restore the text
+    } else {
+      // Reload to get real ID and real-time will also fire
+      await loadComments();
+    }
+
     setSubmitting(false);
   }
 
   async function handleDelete(commentId: string) {
-    await supabase.from('comments').delete().eq('id', commentId);
+    // Optimistic delete
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+    const { error } = await supabase.from('comments').delete().eq('id', commentId);
+    if (error) {
+      // Reload if delete failed
+      loadComments();
+    }
   }
 
   const timeAgo = (iso: string) => {
@@ -108,69 +178,116 @@ export default function Comments({ projectId }: { projectId: string }) {
     return new Date(iso).toLocaleDateString();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Cmd/Ctrl + Enter to submit
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      const form = textareaRef.current?.closest('form');
+      if (form) form.requestSubmit();
+    }
+  };
+
   return (
     <section className={styles.comments}>
       <h2 className={styles.title}>
-        Comments
+        Discussion
         {comments.length > 0 && (
           <span className={styles.count}>{comments.length}</span>
         )}
       </h2>
 
-      {userId && (
-        <form onSubmit={handleSubmit} className={styles.form}>
+      {userId ? (
+        <form onSubmit={handleSubmit} className={`${styles.form} ${focused ? styles.formFocused : ''}`}>
+          <div className={styles.composerHeader}>
+            <div className={styles.composerAvatar}>
+              {(username || '?')[0].toUpperCase()}
+            </div>
+            <span className={styles.composerName}>
+              @{username || 'you'}
+              <ReputationStars score={userReputation} />
+            </span>
+          </div>
           <textarea
+            ref={textareaRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Write a comment..."
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            onKeyDown={handleKeyDown}
+            placeholder="Share your thoughts on this project..."
             className={styles.textarea}
             maxLength={2000}
-            rows={3}
+            rows={focused || body ? 4 : 2}
           />
           <div className={styles.formFooter}>
-            <span className={styles.charCount}>{body.length}/2000</span>
-            <button
-              type="submit"
-              className={styles.submitBtn}
-              disabled={!body.trim() || submitting}
-            >
-              {submitting ? 'Posting...' : 'Post comment'}
-            </button>
+            <span className={styles.charCount}>
+              {body.length > 0 ? `${body.length}/2000` : ''}
+            </span>
+            <div className={styles.formActions}>
+              <span className={styles.shortcutHint}>
+                {body.trim() ? 'Ctrl+Enter' : ''}
+              </span>
+              <button
+                type="submit"
+                className={styles.submitBtn}
+                disabled={!body.trim() || submitting}
+              >
+                {submitting ? 'Posting...' : 'Post'}
+              </button>
+            </div>
           </div>
         </form>
-      )}
-
-      {!userId && (
-        <p className={styles.loginPrompt}>
-          <Link href="/login">Log in</Link> to leave a comment.
-        </p>
+      ) : (
+        <div className={styles.loginPromptBox}>
+          <p className={styles.loginPromptText}>
+            Join the conversation
+          </p>
+          <Link href="/login" className={styles.loginBtn}>
+            Log in to comment
+          </Link>
+        </div>
       )}
 
       <div ref={listRef} className={styles.list}>
         {comments.length === 0 ? (
-          <p className={styles.empty}>No comments yet. Be the first!</p>
+          <div className={styles.emptyState}>
+            <span className={styles.emptyIcon}>💬</span>
+            <p className={styles.emptyTitle}>No comments yet</p>
+            <p className={styles.emptySubtitle}>Be the first to share your thoughts!</p>
+          </div>
         ) : (
           comments.map((c) => (
-            <div key={c.id} className={styles.comment}>
-              <div className={styles.commentHeader}>
-                <Link
-                  href={`/users/${c.profiles?.username || ''}`}
-                  className={styles.author}
-                >
-                  @{c.profiles?.username || 'unknown'}
-                </Link>
-                <span className={styles.time}>{timeAgo(c.created_at)}</span>
-                {c.author_id === userId && (
-                  <button
-                    className={styles.deleteBtn}
-                    onClick={() => handleDelete(c.id)}
-                    title="Delete comment"
-                  >
-                    ×
-                  </button>
-                )}
+            <div
+              key={c.id}
+              className={`${styles.comment} ${c.id.startsWith('optimistic-') ? styles.commentPending : ''}`}
+            >
+              <div className={styles.commentLeft}>
+                <div className={styles.commentAvatar}>
+                  {(c.profiles?.username || '?')[0].toUpperCase()}
+                </div>
               </div>
-              <p className={styles.body}>{c.body}</p>
+              <div className={styles.commentContent}>
+                <div className={styles.commentHeader}>
+                  <Link
+                    href={`/users/${c.profiles?.username || ''}`}
+                    className={styles.author}
+                  >
+                    @{c.profiles?.username || 'unknown'}
+                  </Link>
+                  <ReputationStars score={c.profiles?.reputation_score || 0} />
+                  <span className={styles.time}>{timeAgo(c.created_at)}</span>
+                  {c.author_id === userId && !c.id.startsWith('optimistic-') && (
+                    <button
+                      className={styles.deleteBtn}
+                      onClick={() => handleDelete(c.id)}
+                      title="Delete comment"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <p className={styles.body}>{c.body}</p>
+              </div>
             </div>
           ))
         )}

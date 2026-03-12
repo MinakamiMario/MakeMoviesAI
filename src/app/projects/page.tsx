@@ -39,7 +39,7 @@ export default function Projects() {
 
     let q = supabase
       .from('projects')
-      .select('*, profiles!director_id(username)', { count: 'exact' });
+      .select('*, profiles!director_id(username, reputation_score)', { count: 'exact' });
 
     if (search.trim()) {
       q = q.or(`title.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`);
