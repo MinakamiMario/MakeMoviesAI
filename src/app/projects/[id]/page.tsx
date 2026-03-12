@@ -10,6 +10,7 @@ import ProjectHeader from '@/components/ProjectHeader';
 import SceneTimeline from '@/components/SceneTimeline';
 import PendingContributions from '@/components/PendingContributions';
 import DecisionLog from '@/components/DecisionLog';
+import Comments from '@/components/Comments';
 import LineageTree from '@/components/LineageTree';
 import ContributionReview from '@/components/ContributionReview';
 import { Skeleton, SceneSkeleton } from '@/components/ui';
@@ -176,6 +177,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
         <LineageTree projectId={params.id} projectTitle={project.title} />
         <DecisionLog projectId={params.id} />
+        <Comments projectId={params.id} />
       </div>
 
       {selectedContribution && (

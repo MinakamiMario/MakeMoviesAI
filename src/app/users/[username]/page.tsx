@@ -8,6 +8,8 @@ import Navbar from '@/components/Navbar';
 import { CardSkeleton } from '@/components/ui';
 import styles from './page.module.css';
 
+const PAGE_SIZE = 12;
+
 type Profile = {
   id: string;
   username: string;
@@ -37,6 +39,10 @@ export default function UserProfile() {
   const [contributions, setContributions] = useState<ContributionWithProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [projectPage, setProjectPage] = useState(0);
+  const [contribPage, setContribPage] = useState(0);
+  const [projectTotal, setProjectTotal] = useState(0);
+  const [contribTotal, setContribTotal] = useState(0);
   const supabase = createClient();
 
   useEffect(() => {
@@ -56,23 +62,38 @@ export default function UserProfile() {
 
       setProfile(profileData);
 
-      // Fetch user's directed projects and contributions in parallel
+      // Fetch counts for stats
+      const [projectsCount, contributionsCount] = await Promise.all([
+        supabase
+          .from('projects')
+          .select('id', { count: 'exact', head: true })
+          .eq('director_id', profileData.id),
+        supabase
+          .from('contributions')
+          .select('id', { count: 'exact', head: true })
+          .eq('contributor_id', profileData.id),
+      ]);
+
+      setProjectTotal(projectsCount.count || 0);
+      setContribTotal(contributionsCount.count || 0);
+
+      // Fetch first page of projects and contributions
       const [projectsRes, contributionsRes] = await Promise.all([
         supabase
           .from('projects')
           .select('id, title, description, created_at')
           .eq('director_id', profileData.id)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .range(0, PAGE_SIZE - 1),
         supabase
           .from('contributions')
           .select('id, title, status, created_at, projects!project_id(id, title)')
           .eq('contributor_id', profileData.id)
-          .order('created_at', { ascending: false }),
+          .order('created_at', { ascending: false })
+          .range(0, PAGE_SIZE - 1),
       ]);
 
       setProjects(projectsRes.data || []);
-      // Supabase returns the joined table as an object (single relation)
-      // but TypeScript may infer it as an array; normalize it
       const contribs = (contributionsRes.data || []).map((c: any) => ({
         ...c,
         projects: Array.isArray(c.projects) ? c.projects[0] || null : c.projects,
@@ -84,6 +105,38 @@ export default function UserProfile() {
     load();
   }, [username]);
 
+  // Project page changes
+  useEffect(() => {
+    if (!profile || loading) return;
+    const from = projectPage * PAGE_SIZE;
+    supabase
+      .from('projects')
+      .select('id, title, description, created_at')
+      .eq('director_id', profile.id)
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1)
+      .then(({ data }) => setProjects(data || []));
+  }, [projectPage]);
+
+  // Contribution page changes
+  useEffect(() => {
+    if (!profile || loading) return;
+    const from = contribPage * PAGE_SIZE;
+    supabase
+      .from('contributions')
+      .select('id, title, status, created_at, projects!project_id(id, title)')
+      .eq('contributor_id', profile.id)
+      .order('created_at', { ascending: false })
+      .range(from, from + PAGE_SIZE - 1)
+      .then(({ data }) => {
+        const contribs = (data || []).map((c: any) => ({
+          ...c,
+          projects: Array.isArray(c.projects) ? c.projects[0] || null : c.projects,
+        })) as ContributionWithProject[];
+        setContributions(contribs);
+      });
+  }, [contribPage]);
+
   const formatDate = (iso: string) => {
     return new Date(iso).toLocaleDateString('en-US', {
       month: 'long',
@@ -93,6 +146,8 @@ export default function UserProfile() {
 
   const acceptedCount = contributions.filter((c) => c.status === 'accepted').length;
   const forkedCount = contributions.filter((c) => c.status === 'forked').length;
+  const projectPages = Math.ceil(projectTotal / PAGE_SIZE);
+  const contribPages = Math.ceil(contribTotal / PAGE_SIZE);
 
   if (loading) {
     return (
@@ -151,15 +206,15 @@ export default function UserProfile() {
         {/* Stats */}
         <section className={styles.stats}>
           <div className={styles.stat}>
-            <span className={styles.statNumber}>{projects.length}</span>
+            <span className={styles.statNumber}>{projectTotal}</span>
             <span className={styles.statLabel}>
-              {projects.length === 1 ? 'Project' : 'Projects'}
+              {projectTotal === 1 ? 'Project' : 'Projects'}
             </span>
           </div>
           <div className={styles.stat}>
-            <span className={styles.statNumber}>{contributions.length}</span>
+            <span className={styles.statNumber}>{contribTotal}</span>
             <span className={styles.statLabel}>
-              {contributions.length === 1 ? 'Contribution' : 'Contributions'}
+              {contribTotal === 1 ? 'Contribution' : 'Contributions'}
             </span>
           </div>
           <div className={styles.stat}>
@@ -178,27 +233,50 @@ export default function UserProfile() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
             Projects directed
-            {projects.length > 0 && (
-              <span className={styles.count}>{projects.length}</span>
+            {projectTotal > 0 && (
+              <span className={styles.count}>{projectTotal}</span>
             )}
           </h2>
           {projects.length === 0 ? (
             <p className={styles.empty}>No projects yet.</p>
           ) : (
-            <div className={styles.grid}>
-              {projects.map((project) => (
-                <Link
-                  key={project.id}
-                  href={`/projects/${project.id}`}
-                  className={styles.card}
-                >
-                  <h3>{project.title}</h3>
-                  {project.description && (
-                    <p className={styles.cardDescription}>{project.description}</p>
-                  )}
-                </Link>
-              ))}
-            </div>
+            <>
+              <div className={styles.grid}>
+                {projects.map((project) => (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className={styles.card}
+                  >
+                    <h3>{project.title}</h3>
+                    {project.description && (
+                      <p className={styles.cardDescription}>{project.description}</p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+              {projectPages > 1 && (
+                <div className={styles.pagination}>
+                  <button
+                    className={styles.pageBtn}
+                    onClick={() => setProjectPage((p) => p - 1)}
+                    disabled={projectPage === 0}
+                  >
+                    Previous
+                  </button>
+                  <span className={styles.pageInfo}>
+                    Page {projectPage + 1} of {projectPages}
+                  </span>
+                  <button
+                    className={styles.pageBtn}
+                    onClick={() => setProjectPage((p) => p + 1)}
+                    disabled={projectPage + 1 >= projectPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
 
@@ -206,42 +284,65 @@ export default function UserProfile() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
             Contributions
-            {contributions.length > 0 && (
-              <span className={styles.count}>{contributions.length}</span>
+            {contribTotal > 0 && (
+              <span className={styles.count}>{contribTotal}</span>
             )}
           </h2>
           {contributions.length === 0 ? (
             <p className={styles.empty}>No contributions yet.</p>
           ) : (
-            <div className={styles.contributionList}>
-              {contributions.map((c) => (
-                <Link
-                  key={c.id}
-                  href={c.projects ? `/projects/${c.projects.id}` : '#'}
-                  className={styles.contributionRow}
-                >
-                  <div className={styles.contributionInfo}>
-                    <span className={styles.contributionTitle}>{c.title}</span>
-                    {c.projects && (
-                      <span className={styles.contributionProject}>
-                        in {c.projects.title}
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className={`${styles.statusBadge} ${
-                      c.status === 'accepted'
-                        ? styles.statusAccepted
-                        : c.status === 'forked'
-                        ? styles.statusForked
-                        : styles.statusPending
-                    }`}
+            <>
+              <div className={styles.contributionList}>
+                {contributions.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={c.projects ? `/projects/${c.projects.id}` : '#'}
+                    className={styles.contributionRow}
                   >
-                    {c.status}
+                    <div className={styles.contributionInfo}>
+                      <span className={styles.contributionTitle}>{c.title}</span>
+                      {c.projects && (
+                        <span className={styles.contributionProject}>
+                          in {c.projects.title}
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={`${styles.statusBadge} ${
+                        c.status === 'accepted'
+                          ? styles.statusAccepted
+                          : c.status === 'forked'
+                          ? styles.statusForked
+                          : styles.statusPending
+                      }`}
+                    >
+                      {c.status}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+              {contribPages > 1 && (
+                <div className={styles.pagination}>
+                  <button
+                    className={styles.pageBtn}
+                    onClick={() => setContribPage((p) => p - 1)}
+                    disabled={contribPage === 0}
+                  >
+                    Previous
+                  </button>
+                  <span className={styles.pageInfo}>
+                    Page {contribPage + 1} of {contribPages}
                   </span>
-                </Link>
-              ))}
-            </div>
+                  <button
+                    className={styles.pageBtn}
+                    onClick={() => setContribPage((p) => p + 1)}
+                    disabled={contribPage + 1 >= contribPages}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

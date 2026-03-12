@@ -7,6 +7,8 @@ import Navbar from '@/components/Navbar';
 import { Button, CardSkeleton } from '@/components/ui';
 import styles from './page.module.css';
 
+const PAGE_SIZE = 12;
+
 type Project = {
   id: string;
   title: string;
@@ -25,14 +27,19 @@ export default function Projects() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortOption>('newest');
   const [searching, setSearching] = useState(false);
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
   const supabase = createClient();
 
-  const loadProjects = useCallback(async (search: string, sortBy: SortOption) => {
+  const loadProjects = useCallback(async (search: string, sortBy: SortOption, pg: number) => {
     setSearching(true);
+
+    const from = pg * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
 
     let q = supabase
       .from('projects')
-      .select('*, profiles!director_id(username)');
+      .select('*, profiles!director_id(username)', { count: 'exact' });
 
     if (search.trim()) {
       q = q.or(`title.ilike.%${search.trim()}%,description.ilike.%${search.trim()}%`);
@@ -46,26 +53,35 @@ export default function Projects() {
       q = q.order('title', { ascending: true });
     }
 
-    const { data } = await q;
+    const { data, count } = await q.range(from, to);
     setProjects(data || []);
+    setTotal(count || 0);
     setSearching(false);
     setLoading(false);
   }, []);
 
   // Initial load
   useEffect(() => {
-    loadProjects('', 'newest');
+    loadProjects('', 'newest', 0);
   }, []);
 
-  // Debounced search
+  // Debounced search — reset to page 0
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadProjects(query, sort);
+      setPage(0);
+      loadProjects(query, sort, 0);
     }, 300);
     return () => clearTimeout(timer);
   }, [query, sort]);
 
-  const resultCount = projects.length;
+  // Page change
+  useEffect(() => {
+    if (!loading) {
+      loadProjects(query, sort, page);
+    }
+  }, [page]);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasSearch = query.trim().length > 0;
 
   return (
@@ -97,9 +113,9 @@ export default function Projects() {
           </select>
         </div>
 
-        {hasSearch && !loading && (
+        {!loading && (
           <p className={styles.resultCount}>
-            {searching ? 'Searching...' : `${resultCount} project${resultCount !== 1 ? 's' : ''} found`}
+            {searching ? 'Searching...' : `${total} project${total !== 1 ? 's' : ''}`}
           </p>
         )}
 
@@ -128,34 +144,58 @@ export default function Projects() {
             )}
           </div>
         ) : (
-          <div className={styles.grid}>
-            {projects.map((project) => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className={styles.card}
-              >
-                <h2>{project.title}</h2>
-                <p className={styles.director}>
-                  by{' '}
-                  <span
-                    onClick={(e) => {
-                      if (project.profiles?.username) {
-                        e.preventDefault();
-                        window.location.href = `/users/${project.profiles.username}`;
-                      }
-                    }}
-                    className={styles.usernameLink}
-                  >
-                    @{project.profiles?.username}
-                  </span>
-                </p>
-                {project.description && (
-                  <p className={styles.description}>{project.description}</p>
-                )}
-              </Link>
-            ))}
-          </div>
+          <>
+            <div className={styles.grid}>
+              {projects.map((project) => (
+                <Link
+                  key={project.id}
+                  href={`/projects/${project.id}`}
+                  className={styles.card}
+                >
+                  <h2>{project.title}</h2>
+                  <p className={styles.director}>
+                    by{' '}
+                    <span
+                      onClick={(e) => {
+                        if (project.profiles?.username) {
+                          e.preventDefault();
+                          window.location.href = `/users/${project.profiles.username}`;
+                        }
+                      }}
+                      className={styles.usernameLink}
+                    >
+                      @{project.profiles?.username}
+                    </span>
+                  </p>
+                  {project.description && (
+                    <p className={styles.description}>{project.description}</p>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setPage((p) => p - 1)}
+                  disabled={page === 0}
+                >
+                  Previous
+                </button>
+                <span className={styles.pageInfo}>
+                  Page {page + 1} of {totalPages}
+                </span>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page + 1 >= totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
