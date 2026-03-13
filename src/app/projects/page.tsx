@@ -44,13 +44,13 @@ export default function Projects() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortOption>('trending');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [genesisOnly, setGenesisOnly] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<'discover' | 'all' | 'genesis' | 'forks'>('discover');
   const [viewMode, setViewMode] = useViewMode();
 
   const supabase = createClient();
 
-  // Determine mode: discovery (no search/filter) vs search
-  const isSearchMode = query.trim().length > 0 || selectedTags.length > 0 || genesisOnly;
+  // Determine mode: discovery (curated rows) vs search (full list)
+  const isSearchMode = query.trim().length > 0 || selectedTags.length > 0 || typeFilter !== 'discover';
 
   // Load tags + curated rows on mount
   useEffect(() => {
@@ -62,15 +62,15 @@ export default function Projects() {
     if (!isSearchMode) return;
     const timer = setTimeout(() => {
       setPage(0);
-      loadSearchResults(query, sort, 0, selectedTags, genesisOnly);
+      loadSearchResults(query, sort, 0, selectedTags, typeFilter);
     }, 300);
     return () => clearTimeout(timer);
-  }, [query, sort, selectedTags, genesisOnly]);
+  }, [query, sort, selectedTags, typeFilter]);
 
   // Page change in search mode
   useEffect(() => {
     if (isSearchMode && page > 0) {
-      loadSearchResults(query, sort, page, selectedTags, genesisOnly);
+      loadSearchResults(query, sort, page, selectedTags, typeFilter);
     }
   }, [page]);
 
@@ -99,7 +99,7 @@ export default function Projects() {
     sortBy: SortOption,
     pg: number,
     tagSlugs: string[],
-    genesis: boolean
+    filter: 'discover' | 'all' | 'genesis' | 'forks'
   ) => {
     setSearching(true);
 
@@ -108,7 +108,8 @@ export default function Projects() {
       p_sort: sortBy,
       p_limit: PAGE_SIZE,
       p_offset: pg * PAGE_SIZE,
-      p_genesis_only: genesis,
+      p_genesis_only: filter === 'genesis',
+      p_forks_only: filter === 'forks',
       p_tag_slugs: tagSlugs.length > 0 ? tagSlugs : null,
     });
 
@@ -130,7 +131,7 @@ export default function Projects() {
   const clearFilters = () => {
     setQuery('');
     setSelectedTags([]);
-    setGenesisOnly(false);
+    setTypeFilter('discover');
     setSort('trending');
     setPage(0);
   };
@@ -189,16 +190,28 @@ export default function Projects() {
         {/* Filter row — always visible */}
         <div className={styles.filterRow}>
           <button
-            className={`${styles.filterChip} ${!genesisOnly ? styles.filterChipActive : ''}`}
-            onClick={() => setGenesisOnly(false)}
+            className={`${styles.filterChip} ${typeFilter === 'discover' ? styles.filterChipActive : ''}`}
+            onClick={() => setTypeFilter('discover')}
+          >
+            Discover
+          </button>
+          <button
+            className={`${styles.filterChip} ${typeFilter === 'all' ? styles.filterChipActive : ''}`}
+            onClick={() => setTypeFilter('all')}
           >
             All projects
           </button>
           <button
-            className={`${styles.filterChip} ${genesisOnly ? styles.filterChipActive : ''}`}
-            onClick={() => setGenesisOnly(true)}
+            className={`${styles.filterChip} ${typeFilter === 'genesis' ? styles.filterChipActive : ''}`}
+            onClick={() => setTypeFilter('genesis')}
           >
-            Genesis only
+            Genesis
+          </button>
+          <button
+            className={`${styles.filterChip} ${typeFilter === 'forks' ? styles.filterChipActive : ''}`}
+            onClick={() => setTypeFilter('forks')}
+          >
+            Forks
           </button>
           {isSearchMode && (query || selectedTags.length > 0) && (
             <button className={styles.clearBtn} onClick={clearFilters}>
