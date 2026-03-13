@@ -77,8 +77,26 @@ export default function AdminUsersPage() {
   const openDetail = async (userId: string) => {
     setDetailLoading(true);
     setDetail(null);
-    const { data } = await supabase.rpc('admin_get_user_detail', { p_user_id: userId });
-    if (data) setDetail(data as unknown as UserDetail);
+    const { data, error } = await supabase.rpc('admin_get_user_detail', { p_user_id: userId });
+    if (data && !error) {
+      const d = data as any;
+      const p = d.profile || {};
+      setDetail({
+        id: p.id,
+        username: p.username,
+        email: p.email || '',
+        role: p.role,
+        bio: p.bio,
+        reputation: p.reputation_score || 0,
+        created_at: p.created_at,
+        project_count: (d.projects || []).length,
+        contribution_count: (d.contributions || []).length,
+        comment_count: (d.comments || []).length,
+        report_count: (d.reports_about || []).length,
+        recent_projects: d.projects || [],
+        recent_contributions: d.contributions || [],
+      });
+    }
     setDetailLoading(false);
   };
 
