@@ -22,7 +22,7 @@ const PROTECTED_PREFIXES = [
 /**
  * Route prefixes where ALL sub-paths require authentication.
  */
-const PROTECTED_ROUTE_PREFIXES = ['/inbox'];
+const PROTECTED_ROUTE_PREFIXES = ['/inbox', '/admin'];
 
 function isProtectedRoute(pathname: string): boolean {
   if (PROTECTED_ROUTES.includes(pathname)) return true;
