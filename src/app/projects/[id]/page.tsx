@@ -236,6 +236,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           isDirector={isDirector}
           projectId={params.id}
           showContributeButton={!!user && !isDirector}
+          onCinemaOpen={(startIndex) => setCinemaOpen(true)}
         />
 
         <PendingContributions

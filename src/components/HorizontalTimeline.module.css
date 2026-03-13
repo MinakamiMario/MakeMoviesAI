@@ -1,0 +1,203 @@
+.wrapper {
+  margin-bottom: var(--space-md);
+}
+
+.totalDuration {
+  text-align: right;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Scrollable container */
+.container {
+  overflow-x: auto;
+  cursor: grab;
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.container:active {
+  cursor: grabbing;
+}
+
+.container::-webkit-scrollbar {
+  height: 4px;
+}
+
+.container::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Track holds all segments */
+.track {
+  display: flex;
+  min-height: 80px;
+}
+
+/* Individual scene segment */
+.segment {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--space-sm) var(--space-xs);
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.segment:last-child {
+  border-right: none;
+}
+
+.segment:hover {
+  background-color: rgba(201, 162, 39, 0.06);
+}
+
+.segmentHovered {
+  background-color: rgba(201, 162, 39, 0.1);
+}
+
+.segmentPlayable {
+  /* Subtle indicator for playable scenes */
+}
+
+/* Duration bar (proportional visual) */
+.bar {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--space-xs);
+  min-height: 24px;
+}
+
+.barFill {
+  width: 100%;
+  height: 100%;
+  min-height: 4px;
+  background: linear-gradient(180deg, var(--accent) 0%, rgba(201, 162, 39, 0.4) 100%);
+  border-radius: 2px 2px 0 0;
+  transition: opacity 0.2s ease;
+}
+
+/* Scene info at bottom */
+.segmentInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding-top: var(--space-xs);
+}
+
+.sceneNum {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.sceneTitle {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: center;
+}
+
+.sceneDuration {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hover tooltip */
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.tooltip strong {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.tooltip span {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.tooltipAuthor {
+  color: var(--accent) !important;
+}
+
+.tooltipTime {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary) !important;
+}
+
+/* Time ruler */
+.ruler {
+  position: relative;
+  height: 20px;
+  margin-top: var(--space-xs);
+  border-top: 1px solid var(--border);
+}
+
+.rulerMark {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.rulerMark:first-child {
+  left: 0;
+  transform: none;
+}
+
+.rulerMark:last-child {
+  transform: translateX(-100%);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .segment {
+    min-width: 50px;
+    padding: var(--space-xs) 2px;
+  }
+
+  .sceneTitle {
+    display: none;
+  }
+
+  .tooltip {
+    display: none;
+  }
+}

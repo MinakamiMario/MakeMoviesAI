@@ -42,6 +42,8 @@ export type Scene = {
   media_asset_id?: string | null;
   media_asset_status?: MediaAssetStatus | null;
   media_asset_error?: string | null;
+  // Duration in seconds (from media_assets)
+  duration?: number | null;
 };
 
 /** Contribution entity */

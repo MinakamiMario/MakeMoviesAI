@@ -75,14 +75,31 @@ export async function loadProjectData(
     const orderedSceneIds = buildSceneOrder(edges);
 
     if (orderedSceneIds.length > 0) {
-      const { data: scenesData } = await supabase
-        .from('scenes')
-        .select('*, profiles!contributor_id(username, reputation_score)')
-        .in('id', orderedSceneIds);
+      const [{ data: scenesData }, { data: assetDurations }] = await Promise.all([
+        supabase
+          .from('scenes')
+          .select('*, profiles!contributor_id(username, reputation_score)')
+          .in('id', orderedSceneIds),
+        supabase
+          .from('media_assets')
+          .select('scene_id, duration')
+          .in('scene_id', orderedSceneIds)
+          .not('duration', 'is', null),
+      ]);
+
+      // Build duration map: scene_id → duration
+      const durationMap = new Map<string, number>();
+      (assetDurations || []).forEach((a: { scene_id: string; duration: number }) => {
+        if (a.scene_id && a.duration) durationMap.set(a.scene_id, a.duration);
+      });
 
       const sceneMap = new Map((scenesData || []).map(s => [s.id, s]));
       scenes = orderedSceneIds
-        .map(id => sceneMap.get(id))
+        .map(id => {
+          const scene = sceneMap.get(id);
+          if (!scene) return null;
+          return { ...scene, duration: durationMap.get(id) || null } as Scene;
+        })
         .filter(Boolean) as Scene[];
     }
   }
