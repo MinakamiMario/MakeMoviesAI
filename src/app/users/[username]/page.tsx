@@ -72,94 +72,35 @@ export default function UserProfile() {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser) setCurrentUserId(currentUser.id);
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url, created_at, reputation_score, comment_count, contribution_count, accepted_count, bio, referral_count')
-        .eq('username', username)
-        .single();
+      // Single RPC call replaces 6+ sequential queries
+      const { data: rpcData } = await supabase.rpc('get_user_profile_data', {
+        p_username: username,
+        p_page_size: PAGE_SIZE,
+      });
 
-      if (!profileData) {
+      if (!rpcData || !(rpcData as any).found) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
-      setProfile(profileData);
-      setBioText(profileData.bio || '');
+      const d = rpcData as any;
+      setProfile(d.profile);
+      setBioText(d.profile.bio || '');
+      setProjectTotal(d.project_count || 0);
+      setContribTotal(d.contribution_count || 0);
+      setProjects(d.projects || []);
+      setContributions(d.contributions || []);
 
-      const [projectsCount, contributionsCount] = await Promise.all([
-        supabase
-          .from('projects')
-          .select('id', { count: 'exact', head: true })
-          .eq('director_id', profileData.id),
-        supabase
-          .from('contributions')
-          .select('id', { count: 'exact', head: true })
-          .eq('contributor_id', profileData.id),
-      ]);
-
-      setProjectTotal(projectsCount.count || 0);
-      setContribTotal(contributionsCount.count || 0);
-
-      // Fetch first page of projects and contributions + recent activity
-      const [projectsRes, contributionsRes, recentProjects, recentContribs] = await Promise.all([
-        supabase
-          .from('projects')
-          .select('id, title, description, created_at')
-          .eq('director_id', profileData.id)
-          .order('created_at', { ascending: false })
-          .range(0, PAGE_SIZE - 1),
-        supabase
-          .from('contributions')
-          .select('id, title, status, created_at, projects!project_id(id, title)')
-          .eq('contributor_id', profileData.id)
-          .order('created_at', { ascending: false })
-          .range(0, PAGE_SIZE - 1),
-        // Activity: recent projects
-        supabase
-          .from('projects')
-          .select('id, title, created_at')
-          .eq('director_id', profileData.id)
-          .order('created_at', { ascending: false })
-          .limit(5),
-        // Activity: recent contributions
-        supabase
-          .from('contributions')
-          .select('id, title, status, created_at, projects!project_id(id, title)')
-          .eq('contributor_id', profileData.id)
-          .order('created_at', { ascending: false })
-          .limit(10),
-      ]);
-
-      setProjects(projectsRes.data || []);
-      const contribs = (contributionsRes.data || []).map((c: any) => ({
-        ...c,
-        projects: Array.isArray(c.projects) ? c.projects[0] || null : c.projects,
-      })) as ContributionWithProject[];
-      setContributions(contribs);
-
-      // Build activity feed
-      const activityItems: ActivityItem[] = [];
-      (recentProjects.data || []).forEach((p: any) => {
-        activityItems.push({
-          type: 'project',
-          title: p.title,
-          projectId: p.id,
-          date: p.created_at,
-        });
-      });
-      (recentContribs.data || []).forEach((c: any) => {
-        const proj = Array.isArray(c.projects) ? c.projects[0] : c.projects;
-        activityItems.push({
-          type: c.status === 'accepted' ? 'accepted' : 'contribution',
-          title: c.title,
-          projectTitle: proj?.title,
-          projectId: proj?.id,
-          date: c.created_at,
-        });
-      });
-      activityItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setActivity(activityItems.slice(0, 10));
+      // Map activity from RPC
+      const activityItems: ActivityItem[] = (d.activity || []).map((a: any) => ({
+        type: a.type,
+        title: a.title,
+        projectTitle: a.project_title,
+        projectId: a.project_id,
+        date: a.date,
+      }));
+      setActivity(activityItems);
 
       setLoading(false);
     }

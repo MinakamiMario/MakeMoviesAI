@@ -33,79 +33,25 @@ export default function InboxPage() {
       if (!user) { router.push('/login'); return; }
       setUserId(user.id);
 
-      // Get all conversations for current user
-      const { data: myParticipants } = await supabase
-        .from('conversation_participants')
-        .select('conversation_id, last_read_at, conversations!inner(id, updated_at)')
-        .eq('user_id', user.id)
-        .order('conversations(updated_at)', { ascending: false });
+      // Single RPC call for all inbox data
+      const { data: inboxData } = await supabase.rpc('get_inbox_summary');
 
-      if (!myParticipants || myParticipants.length === 0) {
+      if (!inboxData || (inboxData as any).error || !Array.isArray(inboxData)) {
         setLoading(false);
         return;
       }
 
-      const convIds = myParticipants.map((p: any) => p.conversation_id);
-
-      // Get other participants
-      const { data: allParticipants } = await supabase
-        .from('conversation_participants')
-        .select('conversation_id, user_id, profiles!user_id(username)')
-        .in('conversation_id', convIds)
-        .neq('user_id', user.id);
-
-      // Get latest message per conversation
-      const { data: latestMessages } = await supabase
-        .from('messages')
-        .select('conversation_id, body, created_at, sender_id')
-        .in('conversation_id', convIds)
-        .order('created_at', { ascending: false });
-
-      // Build lookup maps
-      const otherMap = new Map<string, { userId: string; username: string }>();
-      (allParticipants || []).forEach((p: any) => {
-        const profile = Array.isArray(p.profiles) ? p.profiles[0] : p.profiles;
-        otherMap.set(p.conversation_id, {
-          userId: p.user_id,
-          username: profile?.username || 'unknown',
-        });
-      });
-
-      // Latest message per conversation (first occurrence since ordered desc)
-      const latestMsgMap = new Map<string, { body: string; created_at: string; sender_id: string }>();
-      (latestMessages || []).forEach((m: any) => {
-        if (!latestMsgMap.has(m.conversation_id)) {
-          latestMsgMap.set(m.conversation_id, m);
-        }
-      });
-
-      // Count unread per conversation
-      const rows: InboxRow[] = myParticipants.map((p: any) => {
-        const conv = Array.isArray(p.conversations) ? p.conversations[0] : p.conversations;
-        const other = otherMap.get(p.conversation_id);
-        const lastMsg = latestMsgMap.get(p.conversation_id);
-        const lastReadAt = p.last_read_at;
-
-        // Count unread from latestMessages
-        let unread = 0;
-        (latestMessages || []).forEach((m: any) => {
-          if (m.conversation_id === p.conversation_id && m.sender_id !== user.id && m.created_at > lastReadAt) {
-            unread++;
-          }
-        });
-
-        return {
-          conversationId: p.conversation_id,
-          updatedAt: conv?.updated_at || '',
-          lastReadAt,
-          otherUsername: other?.username || 'unknown',
-          otherUserId: other?.userId || '',
-          lastMessageBody: lastMsg?.body || null,
-          lastMessageAt: lastMsg?.created_at || null,
-          lastMessageSenderId: lastMsg?.sender_id || null,
-          unreadCount: unread,
-        };
-      });
+      const rows: InboxRow[] = (inboxData as any[]).map((r: any) => ({
+        conversationId: r.conversation_id,
+        updatedAt: r.updated_at || '',
+        lastReadAt: r.last_read_at || '',
+        otherUsername: r.other_username || 'unknown',
+        otherUserId: r.other_user_id || '',
+        lastMessageBody: r.last_message_body || null,
+        lastMessageAt: r.last_message_at || null,
+        lastMessageSenderId: r.last_message_sender_id || null,
+        unreadCount: r.unread_count || 0,
+      }));
 
       setConversations(rows);
       setLoading(false);

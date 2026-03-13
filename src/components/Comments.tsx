@@ -137,11 +137,10 @@ export default function Comments({ projectId }: { projectId: string }) {
       });
     }, 50);
 
-    // Actually insert
-    const { error } = await supabase.from('comments').insert({
-      project_id: projectId,
-      author_id: userId,
-      body: trimmedBody,
+    // Actually insert via rate-limited RPC
+    const { error } = await supabase.rpc('post_comment', {
+      p_project_id: projectId,
+      p_body: trimmedBody,
     });
 
     if (error) {
