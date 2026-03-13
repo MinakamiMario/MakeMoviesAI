@@ -111,6 +111,33 @@ export type Notification = {
   created_at: string;
 };
 
+/** Browse project (from get_browse_projects/get_curated_rows RPC) */
+export type BrowseProject = {
+  id: string;
+  title: string;
+  description: string | null;
+  director_id: string;
+  created_at: string;
+  forked_from_project_id: string | null;
+  thumbnail_url: string | null;
+  first_scene_media_url: string | null;
+  director_username: string;
+  director_reputation: number;
+  scene_count: number;
+  contribution_count: number;
+  fork_count: number;
+  view_count_7d: number;
+  tags: { name: string; slug: string; category: string }[];
+};
+
+/** Tag entity */
+export type Tag = {
+  id: string;
+  name: string;
+  slug: string;
+  category: 'genre' | 'style' | 'format';
+};
+
 /** Processing job entity */
 export type ProcessingJob = {
   id: string;

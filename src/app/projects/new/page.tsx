@@ -8,11 +8,14 @@ import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { createDefaultBranch, createDefaultCut } from '@/lib/graph';
+import { Tag } from '@/types';
 import styles from './page.module.css';
 
 export default function NewProject() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -20,13 +23,17 @@ export default function NewProject() {
   const toast = useToast();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/login');
+        return;
       }
+      // Load tags
+      const { data: tagsData } = await supabase.rpc('get_all_tags');
+      if (tagsData) setTags(tagsData as Tag[]);
     };
-    checkAuth();
+    init();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,6 +63,16 @@ export default function NewProject() {
       setError(projectError?.message || 'Failed to create project');
       setLoading(false);
       return;
+    }
+
+    // Insert tags
+    if (selectedTagIds.length > 0) {
+      await supabase.from('project_tags').insert(
+        selectedTagIds.map((tagId) => ({
+          project_id: project.id,
+          tag_id: tagId,
+        }))
+      );
     }
 
     const branch = await createDefaultBranch(supabase, project.id, user.id);
@@ -104,6 +121,33 @@ export default function NewProject() {
               rows={4}
             />
           </div>
+
+          {tags.length > 0 && (
+            <div className={styles.field}>
+              <label>Tags <span className={styles.fieldHint}>(optional, max 5)</span></label>
+              <div className={styles.tagPicker}>
+                {tags.map((tag) => {
+                  const selected = selectedTagIds.includes(tag.id);
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      className={`${styles.tagPill} ${selected ? styles.tagPillActive : ''}`}
+                      onClick={() => {
+                        if (selected) {
+                          setSelectedTagIds((prev) => prev.filter((id) => id !== tag.id));
+                        } else if (selectedTagIds.length < 5) {
+                          setSelectedTagIds((prev) => [...prev, tag.id]);
+                        }
+                      }}
+                    >
+                      {tag.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className={styles.actions}>
             <Link href="/dashboard">

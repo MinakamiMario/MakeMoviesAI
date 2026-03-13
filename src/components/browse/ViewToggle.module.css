@@ -1,0 +1,38 @@
+.toggle {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.btn {
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn:hover {
+  color: var(--text-secondary);
+}
+
+.active {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
+.active:hover {
+  color: var(--bg-primary);
+}
+
+@media (max-width: 768px) {
+  .toggle {
+    display: none;
+  }
+}

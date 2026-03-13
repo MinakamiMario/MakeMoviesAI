@@ -14,6 +14,8 @@ export type {
   ProcessingJob,
   Notification,
   NotificationType,
+  BrowseProject,
+  Tag,
 } from './entities';
 
 // Graph/branching types
