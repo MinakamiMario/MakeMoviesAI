@@ -80,7 +80,7 @@
   left: 0;
   right: 0;
   padding: var(--space-md) var(--space-xl) var(--space-lg);
-  background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+  background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
   opacity: 0;
   transition: opacity var(--transition-slow);
   pointer-events: none;
@@ -91,14 +91,18 @@
   pointer-events: auto;
 }
 
-/* Progress track */
+/* Progress track — clickable seek bar */
 .progressTrack {
   position: relative;
-  height: 4px;
+  height: 6px;
   background: rgba(255,255,255,0.15);
-  border-radius: 2px;
-  margin-bottom: var(--space-md);
+  border-radius: 3px;
   cursor: pointer;
+  transition: height var(--transition-fast);
+}
+
+.progressTrack:hover {
+  height: 10px;
 }
 
 .progressFill {
@@ -107,33 +111,23 @@
   left: 0;
   height: 100%;
   background: var(--accent);
-  border-radius: 2px;
-  transition: width 0.3s linear;
+  border-radius: 3px;
+  transition: width 0.1s linear;
+  pointer-events: none;
 }
 
-.sceneMarker {
-  position: absolute;
-  top: -4px;
-  width: 12px;
-  height: 12px;
-  border-radius: var(--radius-full);
-  background: rgba(255,255,255,0.3);
-  border: 2px solid rgba(255,255,255,0.5);
-  transform: translateX(-50%);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  padding: 0;
+/* Time display */
+.timeRow {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-xs) 0;
 }
 
-.sceneMarker:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  transform: translateX(-50%) scale(1.3);
-}
-
-.activeMarker {
-  background: var(--accent);
-  border-color: var(--accent);
+.time {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
 }
 
 /* Controls row */
@@ -142,6 +136,7 @@
   align-items: center;
   gap: var(--space-lg);
   justify-content: center;
+  padding: var(--space-xs) 0;
 }
 
 .controlBtn {
@@ -151,17 +146,35 @@
   font-size: var(--text-base);
   cursor: pointer;
   padding: var(--space-sm);
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), transform var(--transition-fast);
   letter-spacing: -4px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
 }
 
 .controlBtn:hover:not(:disabled) {
   color: #fff;
+  transform: scale(1.1);
 }
 
 .controlBtn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+/* Skip 10s icon */
+.skipIcon {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: rgba(255,255,255,0.8);
+}
+
+.skipArrow {
+  font-size: var(--text-lg);
+  letter-spacing: 0;
 }
 
 .playBtn {
@@ -184,11 +197,47 @@
   background: var(--accent-hover);
 }
 
+/* Scene dot indicators */
+.sceneIndicators {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: var(--space-sm) 0 0;
+}
+
+.sceneDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.2);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.sceneDot:hover {
+  background: rgba(255,255,255,0.5);
+  transform: scale(1.4);
+}
+
+.activeDot {
+  background: var(--accent);
+  width: 24px;
+  border-radius: 4px;
+}
+
+.playedDot {
+  background: rgba(201, 162, 39, 0.4);
+}
+
 .contributorLabel {
   font-size: var(--text-xs);
-  color: rgba(255,255,255,0.4);
-  position: absolute;
-  right: var(--space-xl);
+  color: rgba(255,255,255,0.35);
+  text-align: center;
+  display: block;
+  padding-top: var(--space-xs);
 }
 
 /* Play overlay */
@@ -243,13 +292,17 @@
     font-size: var(--text-base);
   }
 
-  .contributorLabel {
-    display: none;
+  .controls {
+    gap: var(--space-md);
   }
 
   .playBtn {
     width: 40px;
     height: 40px;
     font-size: var(--text-lg);
+  }
+
+  .bigPlay {
+    font-size: 56px;
   }
 }
