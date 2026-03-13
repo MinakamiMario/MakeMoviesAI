@@ -29,7 +29,9 @@ function LoginForm() {
       setError(error.message);
       setLoading(false);
     } else {
-      const redirect = searchParams.get('redirect') || '/dashboard';
+      const raw = searchParams.get('redirect') || '/dashboard';
+      // Prevent open redirect — only allow relative paths
+      const redirect = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/dashboard';
       router.push(redirect);
     }
   };
