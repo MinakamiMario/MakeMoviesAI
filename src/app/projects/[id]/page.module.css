@@ -59,12 +59,95 @@
 .compareLink {
   font-size: var(--text-sm);
   color: var(--text-tertiary);
-  margin-left: auto;
   transition: color var(--transition-fast);
 }
 
 .compareLink:hover {
   color: var(--accent);
+}
+
+/* Share button group */
+.shareGroup {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.shareBtn,
+.shareBtnWa,
+.shareBtnX {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.shareBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.shareBtnWa {
+  color: #25D366;
+  border-color: rgba(37, 211, 102, 0.3);
+}
+
+.shareBtnWa:hover {
+  border-color: #25D366;
+  background: rgba(37, 211, 102, 0.1);
+}
+
+.shareBtnX:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* Signup CTA banner for visitors */
+.signupCta {
+  text-align: center;
+  padding: var(--space-2xl) var(--space-xl);
+  margin-top: var(--space-xl);
+  border: 1px solid rgba(201, 162, 39, 0.2);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.05) 0%, transparent 60%);
+}
+
+.ctaTitle {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm);
+}
+
+.ctaText {
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-lg);
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.ctaBtn {
+  display: inline-block;
+  padding: var(--space-sm) var(--space-xl);
+  background: var(--accent);
+  color: #000;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.ctaBtn:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
@@ -80,5 +163,14 @@
   .compareLink {
     margin-left: 0;
     text-align: center;
+  }
+
+  .shareGroup {
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .signupCta {
+    padding: var(--space-xl) var(--space-md);
   }
 }

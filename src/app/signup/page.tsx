@@ -17,6 +17,7 @@ function SignupForm() {
   const supabase = createClient();
 
   const refCode = searchParams.get('ref');
+  const redirectTo = searchParams.get('redirect');
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +45,9 @@ function SignupForm() {
       await supabase.rpc('apply_referral', { p_referral_code: refCode });
     }
 
-    router.push('/welcome');
+    // Redirect back to content if they came from a project, otherwise welcome page
+    const dest = redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//') ? redirectTo : '/welcome';
+    router.push(dest);
   };
 
   return (

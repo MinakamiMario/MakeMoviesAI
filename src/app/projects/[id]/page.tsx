@@ -40,10 +40,43 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [cinemaOpen, setCinemaOpen] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+  const [shareConfirm, setShareConfirm] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
   const toast = useToast();
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/projects/${params.id}`;
+    const text = project ? `Watch "${project.title}" on MakeMovies` : 'Check out this film on MakeMovies';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: project?.title || 'MakeMovies', text, url });
+        return;
+      } catch {
+        // User cancelled or not supported — fall through to clipboard
+      }
+    }
+
+    await navigator.clipboard.writeText(url);
+    setShareConfirm(true);
+    setTimeout(() => setShareConfirm(false), 2000);
+  };
+
+  const handleShareWhatsApp = () => {
+    const url = `${window.location.origin}/projects/${params.id}`;
+    const text = project ? `Watch "${project.title}" on MakeMovies\n${url}` : url;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleShareX = () => {
+    const url = `${window.location.origin}/projects/${params.id}`;
+    const text = project
+      ? `Watch "${project.title}" — a collaborative film on @MakeMoviesAI`
+      : 'Check out this film on MakeMovies';
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+  };
 
   useEffect(() => {
     loadData();
@@ -228,6 +261,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
                 Compare with original
               </Link>
             )}
+
+            {/* Share buttons — always visible */}
+            <div className={styles.shareGroup}>
+              <button className={styles.shareBtn} onClick={handleShare} title="Copy link">
+                {shareConfirm ? '✓ Copied!' : '🔗 Share'}
+              </button>
+              <button className={styles.shareBtnWa} onClick={handleShareWhatsApp} title="Share on WhatsApp">
+                WhatsApp
+              </button>
+              <button className={styles.shareBtnX} onClick={handleShareX} title="Share on X">
+                𝕏
+              </button>
+            </div>
           </div>
         )}
 
@@ -254,6 +300,19 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           projectTitle={project.title}
           currentUserId={user?.id}
         />
+
+        {/* Signup CTA for unauthenticated visitors */}
+        {!user && (
+          <div className={styles.signupCta}>
+            <h3 className={styles.ctaTitle}>Want to contribute to this film?</h3>
+            <p className={styles.ctaText}>
+              Join MakeMovies to fork, contribute scenes, and collaborate with filmmakers worldwide.
+            </p>
+            <Link href={`/signup?redirect=/projects/${params.id}`} className={styles.ctaBtn}>
+              Join MakeMovies — it&apos;s free
+            </Link>
+          </div>
+        )}
 
         {/* Director-only analytics */}
         {isDirector && (
