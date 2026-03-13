@@ -1,0 +1,16 @@
+{
+  "name": "MakeMovies",
+  "short_name": "MakeMovies",
+  "description": "Finish films together — collaborative filmmaking platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#c9a227",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
