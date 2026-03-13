@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import Navbar from '@/components/Navbar';
 import WaitlistForm from '@/components/WaitlistForm';
 import styles from './page.module.css';
 
@@ -19,6 +20,8 @@ function LandingContent() {
   }, []);
 
   return (
+    <>
+    <Navbar />
     <main className={styles.main}>
       {/* ====== HERO ====== */}
       <section className={styles.hero}>
@@ -127,6 +130,7 @@ function LandingContent() {
         </div>
       </section>
     </main>
+    </>
   );
 }
 
