@@ -5,3 +5,6 @@ export { default as TagFilterBar } from './TagFilterBar';
 export { default as ViewToggle, useViewMode } from './ViewToggle';
 export type { ViewMode } from './ViewToggle';
 export { default as HoverPreview } from './HoverPreview';
+export { default as ContributorCard } from './ContributorCard';
+export type { ContributorData } from './ContributorCard';
+export { default as ContributorRow } from './ContributorRow';

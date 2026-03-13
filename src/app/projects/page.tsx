@@ -9,11 +9,13 @@ import {
   ProjectCard,
   ProjectCardSkeleton,
   CuratedRow,
+  ContributorRow,
   TagFilterBar,
   ViewToggle,
   useViewMode,
 } from '@/components/browse';
 import type { ViewMode } from '@/components/browse';
+import type { ContributorData } from '@/components/browse';
 import { BrowseProject, Tag } from '@/types';
 import styles from './page.module.css';
 
@@ -31,6 +33,7 @@ type CuratedRows = {
 export default function Projects() {
   // Discovery mode state
   const [curatedRows, setCuratedRows] = useState<CuratedRows | null>(null);
+  const [topContributors, setTopContributors] = useState<ContributorData[]>([]);
   const [discoveryLoading, setDiscoveryLoading] = useState(true);
 
   // Search/filter mode state
@@ -77,9 +80,10 @@ export default function Projects() {
   const loadDiscovery = async () => {
     setDiscoveryLoading(true);
 
-    const [tagsResult, curatedResult] = await Promise.all([
+    const [tagsResult, curatedResult, contributorsResult] = await Promise.all([
       supabase.rpc('get_all_tags'),
       supabase.rpc('get_curated_rows'),
+      supabase.rpc('get_top_contributors', { p_period: 'month', p_limit: 10 }),
     ]);
 
     if (tagsResult.data) {
@@ -89,6 +93,10 @@ export default function Projects() {
     if (curatedResult.data) {
       const data = curatedResult.data as CuratedRows;
       setCuratedRows(data);
+    }
+
+    if (contributorsResult.data) {
+      setTopContributors(contributorsResult.data as ContributorData[]);
     }
 
     setDiscoveryLoading(false);
@@ -266,6 +274,14 @@ export default function Projects() {
                     projects={curatedRows.most_forked}
                   />
                 )}
+                {topContributors.length > 0 && (
+                  <ContributorRow
+                    title="Top Contributors"
+                    contributors={topContributors}
+                    seeAllHref="/leaderboard"
+                  />
+                )}
+
                 {curatedRows.tag_rows?.map((row) => (
                   <CuratedRow
                     key={row.tag_slug}

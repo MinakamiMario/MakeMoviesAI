@@ -129,6 +129,84 @@
   margin-bottom: 0;
 }
 
+/* ====== TOP CREATORS ====== */
+
+.creatorsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+}
+
+.creatorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: var(--space-xl) var(--space-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.creatorCard:hover {
+  border-color: rgba(201, 162, 39, 0.4);
+  transform: translateY(-3px);
+}
+
+.creatorMedal {
+  font-size: 1.6rem;
+}
+
+.creatorAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #c9a227 0%, #8a6e14 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0a0a0a;
+}
+
+.creatorName {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--accent);
+}
+
+.creatorRep {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.creatorStats {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.creatorsLink {
+  text-align: center;
+  margin-top: var(--space-lg);
+}
+
+.creatorsLink a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.creatorsLink a:hover {
+  text-decoration: underline;
+}
+
 /* ====== FOUNDING DIRECTORS ====== */
 
 .foundingBlock {
@@ -220,5 +298,10 @@
 
   .foundingBlock {
     padding: var(--space-lg);
+  }
+
+  .creatorsGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
   }
 }

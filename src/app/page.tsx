@@ -3,19 +3,33 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import WaitlistForm from '@/components/WaitlistForm';
 import styles from './page.module.css';
+
+type TopCreator = {
+  id: string;
+  username: string;
+  reputation_score: number;
+  accepted_count: number;
+  contribution_count: number;
+  project_count: number;
+};
 
 function LandingContent() {
   const searchParams = useSearchParams();
   const ref = searchParams.get('ref');
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
+  const [topCreators, setTopCreators] = useState<TopCreator[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.rpc('get_waitlist_count').then(({ data }) => {
       if (typeof data === 'number') setWaitlistCount(data);
+    });
+    supabase.rpc('get_top_contributors', { p_period: 'all_time', p_limit: 3 }).then(({ data }) => {
+      if (data) setTopCreators(data as TopCreator[]);
     });
   }, []);
 
@@ -94,6 +108,38 @@ function LandingContent() {
           </p>
         </div>
       </section>
+
+      {/* ====== TOP CREATORS ====== */}
+      {topCreators.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Top Creators</h2>
+          <div className={styles.creatorsGrid}>
+            {topCreators.map((c, i) => (
+              <Link
+                key={c.id}
+                href={`/users/${c.username}`}
+                className={styles.creatorCard}
+              >
+                <span className={styles.creatorMedal}>
+                  {['🥇', '🥈', '🥉'][i]}
+                </span>
+                <div className={styles.creatorAvatar}>
+                  {c.username.charAt(0).toUpperCase()}
+                </div>
+                <span className={styles.creatorName}>@{c.username}</span>
+                <span className={styles.creatorRep}>{c.reputation_score} reputation</span>
+                <div className={styles.creatorStats}>
+                  <span>{c.project_count} projects</span>
+                  <span>{c.accepted_count} accepted</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          <div className={styles.creatorsLink}>
+            <Link href="/leaderboard">View full leaderboard &rarr;</Link>
+          </div>
+        </section>
+      )}
 
       {/* ====== FOUNDING DIRECTORS ====== */}
       <section className={styles.section}>
