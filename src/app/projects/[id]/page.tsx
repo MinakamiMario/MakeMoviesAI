@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,18 +10,20 @@ import styles from './page.module.css';
 import ProjectHeader from '@/components/ProjectHeader';
 import SceneTimeline from '@/components/SceneTimeline';
 import PendingContributions from '@/components/PendingContributions';
-import DecisionLog from '@/components/DecisionLog';
-import Comments from '@/components/Comments';
-import LineageTree from '@/components/LineageTree';
-import ContributionReview from '@/components/ContributionReview';
-import CreditsRoll from '@/components/CreditsRoll';
-import CinemaMode from '@/components/CinemaMode';
-import ProjectAnalytics from '@/components/ProjectAnalytics';
 import { Skeleton, SceneSkeleton } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { Scene, Contribution, ForkOrigin, BranchData, Project } from '@/types';
 import { loadProjectData } from '@/lib/projectLoader';
 import { acceptContribution, forkContribution } from '@/lib/decisions';
+
+// Code-split heavy components (loaded after initial render)
+const CinemaMode = dynamic(() => import('@/components/CinemaMode'), { ssr: false });
+const ContributionReview = dynamic(() => import('@/components/ContributionReview'), { ssr: false });
+const Comments = dynamic(() => import('@/components/Comments'));
+const DecisionLog = dynamic(() => import('@/components/DecisionLog'));
+const LineageTree = dynamic(() => import('@/components/LineageTree'));
+const CreditsRoll = dynamic(() => import('@/components/CreditsRoll'));
+const ProjectAnalytics = dynamic(() => import('@/components/ProjectAnalytics'));
 
 export default function ProjectPage({ params }: { params: { id: string } }) {
   const [project, setProject] = useState<Project | null>(null);

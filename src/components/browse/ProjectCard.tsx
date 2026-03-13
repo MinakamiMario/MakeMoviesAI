@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { BrowseProject } from '@/types';
 import styles from './ProjectCard.module.css';
 
@@ -81,11 +82,12 @@ export default function ProjectCard({ project, variant = 'grid' }: Props) {
               playsInline
             />
           ) : (
-            <img
+            <Image
               src={thumbnailSrc}
               alt={project.title}
               className={styles.thumbnailMedia}
-              loading="lazy"
+              fill
+              sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
               onError={() => setImgError(true)}
             />
           )
