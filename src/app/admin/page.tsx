@@ -5,15 +5,11 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import styles from './page.module.css';
 
-type Stats = {
-  total_users: number;
-  total_projects: number;
-  total_contributions: number;
-  total_comments: number;
-  pending_reports: number;
-  signups_7d: number;
-  projects_7d: number;
-  contributions_7d: number;
+type StatsRaw = {
+  users: { total: number; signups_7d: number; signups_30d: number; active_7d: number; suspended: number };
+  content: { projects: number; projects_7d: number; comments: number; contributions: number; contributions_7d: number; views: number };
+  moderation: { pending_reports: number };
+  infrastructure: { media_files: number; waitlist_pending: number };
 };
 
 type ActivityItem = {
@@ -27,10 +23,10 @@ type ActivityItem = {
   time: string;
 };
 
-type SignupPoint = { day: string; count: number };
+type SignupPoint = { date: string; count: number };
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<StatsRaw | null>(null);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [signups, setSignups] = useState<SignupPoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +40,7 @@ export default function AdminDashboard() {
         supabase.rpc('admin_get_signup_chart', { p_days: 14 }),
       ]);
 
-      if (statsRes.data) setStats(statsRes.data as unknown as Stats);
+      if (statsRes.data) setStats(statsRes.data as unknown as StatsRaw);
       if (activityRes.data) setActivity(activityRes.data as unknown as ActivityItem[]);
       if (signupsRes.data) setSignups(signupsRes.data as unknown as SignupPoint[]);
       setLoading(false);
@@ -55,11 +51,11 @@ export default function AdminDashboard() {
   if (loading) return <LoadingSkeleton />;
 
   const statCards = stats ? [
-    { label: 'Total Users', value: stats.total_users, sub: `+${stats.signups_7d} this week` },
-    { label: 'Total Projects', value: stats.total_projects, sub: `+${stats.projects_7d} this week` },
-    { label: 'Contributions', value: stats.total_contributions, sub: `+${stats.contributions_7d} this week` },
-    { label: 'Comments', value: stats.total_comments, sub: null },
-    { label: 'Pending Reports', value: stats.pending_reports, sub: null, alert: stats.pending_reports > 0 },
+    { label: 'Total Users', value: stats.users.total, sub: `+${stats.users.signups_7d} this week` },
+    { label: 'Total Projects', value: stats.content.projects, sub: `+${stats.content.projects_7d} this week` },
+    { label: 'Contributions', value: stats.content.contributions, sub: `+${stats.content.contributions_7d} this week` },
+    { label: 'Comments', value: stats.content.comments, sub: null },
+    { label: 'Pending Reports', value: stats.moderation.pending_reports, sub: null, alert: stats.moderation.pending_reports > 0 },
   ] : [];
 
   const maxSignup = Math.max(...signups.map(s => s.count), 1);
@@ -84,13 +80,13 @@ export default function AdminDashboard() {
         <h2 className={styles.sectionTitle}>Signups (14 days)</h2>
         <div className={styles.chart}>
           {signups.map((point) => (
-            <div key={point.day} className={styles.chartBar}>
+            <div key={point.date} className={styles.chartBar}>
               <div
                 className={styles.chartFill}
                 style={{ height: `${(point.count / maxSignup) * 100}%` }}
               />
               <span className={styles.chartLabel}>
-                {new Date(point.day).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
+                {new Date(point.date + 'T00:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' })}
               </span>
               <span className={styles.chartCount}>{point.count}</span>
             </div>
@@ -146,7 +142,7 @@ export default function AdminDashboard() {
       {/* Quick Links */}
       <div className={styles.quickLinks}>
         <Link href="/admin/reports" className={styles.quickLink}>
-          🚩 View Reports {stats && stats.pending_reports > 0 && `(${stats.pending_reports})`}
+          🚩 View Reports {stats && stats.moderation.pending_reports > 0 && `(${stats.moderation.pending_reports})`}
         </Link>
         <Link href="/admin/users" className={styles.quickLink}>
           👥 Manage Users
