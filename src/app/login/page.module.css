@@ -91,6 +91,16 @@
   border-radius: var(--radius-md);
 }
 
+.referralNote {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  background-color: var(--accent-subtle);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
 .switch {
   margin-top: var(--space-lg);
   text-align: center;

@@ -67,17 +67,43 @@
   color: var(--text-tertiary);
 }
 
+.profileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
 .joined {
   font-size: var(--text-sm);
   color: var(--text-tertiary);
   margin-top: var(--space-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.referralBadge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.profileActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  flex-wrap: wrap;
 }
 
 .messageBtn {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
-  margin-top: var(--space-sm);
   padding: var(--space-xs) var(--space-md);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -90,6 +116,211 @@
 .messageBtn:hover {
   background-color: var(--accent);
   color: var(--bg-primary);
+}
+
+.shareBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.shareBtn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.shareXBtn {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.shareXBtn:hover {
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.shareConfirm {
+  font-size: var(--text-xs);
+  color: var(--success);
+}
+
+/* Bio */
+.bioSection {
+  margin-bottom: var(--space-xl);
+}
+
+.bioDisplay {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.bioText {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  flex: 1;
+}
+
+.bioPlaceholder {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  font-style: italic;
+  flex: 1;
+}
+
+.bioEditBtn {
+  font-size: var(--text-xs);
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.bioEditBtn:hover {
+  text-decoration: underline;
+}
+
+.bioEdit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.bioTextarea {
+  width: 100%;
+  padding: var(--space-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  resize: vertical;
+  font-family: inherit;
+}
+
+.bioTextarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.bioEditActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.bioCharCount {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  margin-right: auto;
+}
+
+.bioCancelBtn {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.bioSaveBtn {
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--bg-primary);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.bioSaveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Activity Feed */
+.activityFeed {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--bg-secondary);
+}
+
+.activityIcon {
+  font-size: var(--text-md);
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.activityContent {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.activityLink {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--transition-fast);
+}
+
+.activityLink:hover {
+  color: var(--accent);
+}
+
+.activityContent > span:first-child {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activityDate {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 /* Stats */
@@ -368,6 +599,16 @@
   }
 
   .contributionRow {
+    padding: var(--space-sm) var(--space-md);
+  }
+
+  .activityContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .activityItem {
     padding: var(--space-sm) var(--space-md);
   }
 }

@@ -6,9 +6,41 @@ import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://makemovies.ai';
+
 export const metadata: Metadata = {
-  title: 'MakeMovies — Finish films together',
-  description: 'A collaborative platform where filmmakers finish stories together.',
+  title: {
+    default: 'MakeMovies — Finish films together',
+    template: '%s | MakeMovies',
+  },
+  description: 'A collaborative platform where filmmakers finish stories together. Fork, contribute, and create films as a community.',
+  metadataBase: new URL(siteUrl),
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: siteUrl,
+    siteName: 'MakeMovies',
+    title: 'MakeMovies — Finish films together',
+    description: 'A collaborative platform where filmmakers finish stories together. Fork, contribute, and create films as a community.',
+    images: [
+      {
+        url: `${siteUrl}/api/og`,
+        width: 1200,
+        height: 630,
+        alt: 'MakeMovies — Collaborative Filmmaking Platform',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MakeMovies — Finish films together',
+    description: 'A collaborative platform where filmmakers finish stories together.',
+    images: [`${siteUrl}/api/og`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

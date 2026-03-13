@@ -1,26 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import styles from '../login/page.module.css';
 
-export default function Signup() {
+function SignupForm() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+
+  const refCode = searchParams.get('ref');
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { error, data } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -33,9 +36,15 @@ export default function Signup() {
     if (error) {
       setError(error.message);
       setLoading(false);
-    } else {
-      router.push('/welcome');
+      return;
     }
+
+    // Apply referral if code present
+    if (refCode && data.user) {
+      await supabase.rpc('apply_referral', { p_referral_code: refCode });
+    }
+
+    router.push('/welcome');
   };
 
   return (
@@ -43,6 +52,12 @@ export default function Signup() {
       <div className={styles.container}>
         <Link href="/" className={styles.logo}>MakeMovies</Link>
         <h1 className={styles.title}>Create account</h1>
+
+        {refCode && (
+          <p className={styles.referralNote}>
+            You&apos;ve been invited by a filmmaker!
+          </p>
+        )}
 
         <form onSubmit={handleSignup} className={styles.form}>
           {error && <p className={styles.error}>{error}</p>}
@@ -91,5 +106,13 @@ export default function Signup() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function Signup() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

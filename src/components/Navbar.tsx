@@ -75,6 +75,9 @@ export default function Navbar({ showNav = true }: Props) {
                 </Link>
                 <NotificationBell />
                 <InboxIcon />
+                <Link href="/invite" className={styles.navLink} onClick={() => setMenuOpen(false)}>
+                  Invite
+                </Link>
                 {username && (
                   <Link href={`/users/${username}`} className={styles.navLink} onClick={() => setMenuOpen(false)}>
                     Profile

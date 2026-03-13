@@ -19,6 +19,8 @@ type Profile = {
   comment_count: number;
   contribution_count: number;
   accepted_count: number;
+  bio: string | null;
+  referral_count: number;
 };
 
 type Project = {
@@ -36,11 +38,20 @@ type ContributionWithProject = {
   projects: { id: string; title: string } | null;
 };
 
+type ActivityItem = {
+  type: 'project' | 'contribution' | 'accepted';
+  title: string;
+  projectTitle?: string;
+  projectId?: string;
+  date: string;
+};
+
 export default function UserProfile() {
   const { username } = useParams<{ username: string }>();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [contributions, setContributions] = useState<ContributionWithProject[]>([]);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -48,18 +59,22 @@ export default function UserProfile() {
   const [contribPage, setContribPage] = useState(0);
   const [projectTotal, setProjectTotal] = useState(0);
   const [contribTotal, setContribTotal] = useState(0);
+  const [editingBio, setEditingBio] = useState(false);
+  const [bioText, setBioText] = useState('');
+  const [bioSaving, setBioSaving] = useState(false);
+  const [shareMsg, setShareMsg] = useState('');
   const supabase = createClient();
+
+  const isOwnProfile = currentUserId && profile && currentUserId === profile.id;
 
   useEffect(() => {
     async function load() {
-      // Get current user for "Message" button visibility
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       if (currentUser) setCurrentUserId(currentUser.id);
 
-      // Fetch profile by username
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url, created_at, reputation_score, comment_count, contribution_count, accepted_count')
+        .select('id, username, avatar_url, created_at, reputation_score, comment_count, contribution_count, accepted_count, bio, referral_count')
         .eq('username', username)
         .single();
 
@@ -70,8 +85,8 @@ export default function UserProfile() {
       }
 
       setProfile(profileData);
+      setBioText(profileData.bio || '');
 
-      // Fetch counts for stats
       const [projectsCount, contributionsCount] = await Promise.all([
         supabase
           .from('projects')
@@ -86,8 +101,8 @@ export default function UserProfile() {
       setProjectTotal(projectsCount.count || 0);
       setContribTotal(contributionsCount.count || 0);
 
-      // Fetch first page of projects and contributions
-      const [projectsRes, contributionsRes] = await Promise.all([
+      // Fetch first page of projects and contributions + recent activity
+      const [projectsRes, contributionsRes, recentProjects, recentContribs] = await Promise.all([
         supabase
           .from('projects')
           .select('id, title, description, created_at')
@@ -100,6 +115,20 @@ export default function UserProfile() {
           .eq('contributor_id', profileData.id)
           .order('created_at', { ascending: false })
           .range(0, PAGE_SIZE - 1),
+        // Activity: recent projects
+        supabase
+          .from('projects')
+          .select('id, title, created_at')
+          .eq('director_id', profileData.id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        // Activity: recent contributions
+        supabase
+          .from('contributions')
+          .select('id, title, status, created_at, projects!project_id(id, title)')
+          .eq('contributor_id', profileData.id)
+          .order('created_at', { ascending: false })
+          .limit(10),
       ]);
 
       setProjects(projectsRes.data || []);
@@ -108,6 +137,30 @@ export default function UserProfile() {
         projects: Array.isArray(c.projects) ? c.projects[0] || null : c.projects,
       })) as ContributionWithProject[];
       setContributions(contribs);
+
+      // Build activity feed
+      const activityItems: ActivityItem[] = [];
+      (recentProjects.data || []).forEach((p: any) => {
+        activityItems.push({
+          type: 'project',
+          title: p.title,
+          projectId: p.id,
+          date: p.created_at,
+        });
+      });
+      (recentContribs.data || []).forEach((c: any) => {
+        const proj = Array.isArray(c.projects) ? c.projects[0] : c.projects;
+        activityItems.push({
+          type: c.status === 'accepted' ? 'accepted' : 'contribution',
+          title: c.title,
+          projectTitle: proj?.title,
+          projectId: proj?.id,
+          date: c.created_at,
+        });
+      });
+      activityItems.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setActivity(activityItems.slice(0, 10));
+
       setLoading(false);
     }
 
@@ -174,6 +227,66 @@ export default function UserProfile() {
     return 'Newcomer';
   };
 
+  const handleSaveBio = async () => {
+    if (!profile) return;
+    setBioSaving(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ bio: bioText.trim() || null })
+      .eq('id', profile.id);
+    if (!error) {
+      setProfile({ ...profile, bio: bioText.trim() || null });
+      setEditingBio(false);
+    }
+    setBioSaving(false);
+  };
+
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/users/${profile?.username}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `@${profile?.username} on MakeMovies`, url });
+        return;
+      } catch { /* fallback */ }
+    }
+    await navigator.clipboard.writeText(url);
+    setShareMsg('Link copied!');
+    setTimeout(() => setShareMsg(''), 2000);
+  };
+
+  const handleShareOnX = () => {
+    const url = `${window.location.origin}/users/${profile?.username}`;
+    const text = `Check out @${profile?.username}'s filmmaker profile on MakeMovies`;
+    window.open(
+      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      '_blank'
+    );
+  };
+
+  const formatActivityDate = (iso: string) => {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    return formatDate(iso);
+  };
+
+  const getActivityIcon = (type: string) => {
+    if (type === 'project') return '🎬';
+    if (type === 'accepted') return '✅';
+    return '🎭';
+  };
+
+  const getActivityLabel = (item: ActivityItem) => {
+    if (item.type === 'project') return `Created "${item.title}"`;
+    if (item.type === 'accepted') return `Contribution accepted: "${item.title}"`;
+    return `Contributed to "${item.projectTitle}"`;
+  };
+
   const starCount = profile ? getStarCount(profile.reputation_score) : 0;
   const starLabel = getStarLabel(starCount);
   const projectPages = Math.ceil(projectTotal / PAGE_SIZE);
@@ -225,7 +338,7 @@ export default function UserProfile() {
           <div className={styles.avatar}>
             {(profile?.username || '?')[0].toUpperCase()}
           </div>
-          <div>
+          <div className={styles.profileInfo}>
             <h1 className={styles.displayName}>@{profile?.username}</h1>
             {starCount > 0 && (
               <div className={styles.reputation}>
@@ -238,17 +351,73 @@ export default function UserProfile() {
             )}
             <p className={styles.joined}>
               Joined {profile?.created_at ? formatDate(profile.created_at) : ''}
+              {(profile?.referral_count || 0) > 0 && (
+                <span className={styles.referralBadge}>
+                  {profile?.referral_count} invited
+                </span>
+              )}
             </p>
-            {currentUserId && profile && currentUserId !== profile.id && (
-              <Link href={`/inbox/new?to=${profile.username}`} className={styles.messageBtn}>
+            <div className={styles.profileActions}>
+              {currentUserId && profile && currentUserId !== profile.id && (
+                <Link href={`/inbox/new?to=${profile.username}`} className={styles.messageBtn}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                  Message
+                </Link>
+              )}
+              <button className={styles.shareBtn} onClick={handleShareProfile}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                  <polyline points="22,6 12,13 2,6" />
+                  <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                 </svg>
-                Message
-              </Link>
-            )}
+                Share
+              </button>
+              <button className={styles.shareXBtn} onClick={handleShareOnX}>
+                Share on X
+              </button>
+              {shareMsg && <span className={styles.shareConfirm}>{shareMsg}</span>}
+            </div>
           </div>
+        </section>
+
+        {/* Bio */}
+        <section className={styles.bioSection}>
+          {isOwnProfile && editingBio ? (
+            <div className={styles.bioEdit}>
+              <textarea
+                className={styles.bioTextarea}
+                value={bioText}
+                onChange={(e) => setBioText(e.target.value)}
+                placeholder="Tell the community about yourself..."
+                maxLength={280}
+                rows={3}
+              />
+              <div className={styles.bioEditActions}>
+                <span className={styles.bioCharCount}>{bioText.length}/280</span>
+                <button className={styles.bioCancelBtn} onClick={() => { setEditingBio(false); setBioText(profile?.bio || ''); }}>
+                  Cancel
+                </button>
+                <button className={styles.bioSaveBtn} onClick={handleSaveBio} disabled={bioSaving}>
+                  {bioSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.bioDisplay}>
+              {profile?.bio ? (
+                <p className={styles.bioText}>{profile.bio}</p>
+              ) : isOwnProfile ? (
+                <p className={styles.bioPlaceholder}>Add a bio to tell people about yourself</p>
+              ) : null}
+              {isOwnProfile && (
+                <button className={styles.bioEditBtn} onClick={() => setEditingBio(true)}>
+                  {profile?.bio ? 'Edit bio' : 'Add bio'}
+                </button>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Stats */}
@@ -282,6 +451,30 @@ export default function UserProfile() {
             </div>
           )}
         </section>
+
+        {/* Activity Feed */}
+        {activity.length > 0 && (
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Recent activity</h2>
+            <div className={styles.activityFeed}>
+              {activity.map((item, i) => (
+                <div key={i} className={styles.activityItem}>
+                  <span className={styles.activityIcon}>{getActivityIcon(item.type)}</span>
+                  <div className={styles.activityContent}>
+                    {item.projectId ? (
+                      <Link href={`/projects/${item.projectId}`} className={styles.activityLink}>
+                        {getActivityLabel(item)}
+                      </Link>
+                    ) : (
+                      <span>{getActivityLabel(item)}</span>
+                    )}
+                    <span className={styles.activityDate}>{formatActivityDate(item.date)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Projects */}
         <section className={styles.section}>
