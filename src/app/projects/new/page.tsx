@@ -39,6 +39,12 @@ export default function NewProject() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (selectedTagIds.length === 0) {
+      setError('Select at least one tag');
+      return;
+    }
+
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -124,7 +130,7 @@ export default function NewProject() {
 
           {tags.length > 0 && (
             <div className={styles.field}>
-              <label>Tags <span className={styles.fieldHint}>(optional, max 5)</span></label>
+              <label>Tags <span className={styles.fieldHint}>(pick 1–5)</span></label>
               <div className={styles.tagPicker}>
                 {tags.map((tag) => {
                   const selected = selectedTagIds.includes(tag.id);
