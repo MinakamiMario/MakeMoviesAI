@@ -7,13 +7,6 @@ import {
   BranchData,
 } from '@/types';
 import {
-  getDefaultBranch,
-  getBranchEdges,
-  buildSceneOrder,
-} from '@/lib/graph';
-import {
-  getForkCountLabelCapped,
-  getForkDepth,
   formatForkPoint,
   formatRelativeTime,
 } from './lineageHelpers';
@@ -33,107 +26,85 @@ export type ProjectPageData = {
   isDirector: boolean;
 };
 
+/**
+ * Load all project page data in a single RPC call.
+ * Replaces 7+ sequential queries with one Postgres function.
+ * The RPC handles: project fetch, director profile, parent title,
+ * branch lookup, scene ordering (recursive CTE), contributions
+ * (role-aware), fork count, and fork depth.
+ */
 export async function loadProjectData(
   supabase: SupabaseClient,
   projectId: string,
-  userId: string | null
+  _userId: string | null
 ): Promise<ProjectPageData | null> {
-  const { data: projectData } = await supabase
-    .from('projects')
-    .select('*, profiles!director_id(username, reputation_score)')
-    .eq('id', projectId)
-    .single();
+  const { data: result, error } = await supabase.rpc('get_project_page_data', {
+    p_project_id: projectId,
+  });
 
-  if (!projectData) {
+  if (error || !result || !result.found) {
     return null;
   }
 
-  const project = projectData as Project;
-  const isDirector = userId === project.director_id;
+  // Map RPC response to Project type
+  const projectRaw = result.project;
+  const project: Project = {
+    ...projectRaw,
+    profiles: {
+      username: result.director_username,
+      reputation_score: result.director_reputation || 0,
+    },
+  };
 
-  // Load fork origin if applicable
+  const isDirector: boolean = result.is_director || false;
+
+  // Map scenes from JSONB array
+  const scenes: Scene[] = (result.scenes || []).map((s: Record<string, unknown>) => ({
+    ...s,
+    profiles: s.profiles || null,
+  })) as Scene[];
+
+  // Map contributions from JSONB array
+  const contributions: Contribution[] = (result.contributions || []).map(
+    (c: Record<string, unknown>) => ({
+      ...c,
+      profiles: c.profiles || null,
+    })
+  ) as Contribution[];
+
+  // Map branch (RPC returns id + name; fill remaining fields with defaults)
+  const branch: BranchData | null = result.branch
+    ? {
+        id: result.branch.id,
+        name: result.branch.name,
+        project_id: projectId,
+        description: null,
+        is_default: true,
+        is_archived: false,
+        forked_from_branch_id: null,
+        fork_point_scene_id: null,
+        created_by: project.director_id,
+        created_at: project.created_at,
+      }
+    : null;
+
+  // Map fork origin
   let forkedFrom: ForkOrigin | null = null;
   if (project.forked_from_project_id) {
-    const { data: parentProject } = await supabase
-      .from('projects')
-      .select('title')
-      .eq('id', project.forked_from_project_id)
-      .single();
-
     forkedFrom = {
       forked_from_project_id: project.forked_from_project_id,
-      parent_project: parentProject,
+      parent_project: result.parent_title
+        ? { title: result.parent_title }
+        : null,
     };
   }
 
-  // Load branch and scenes
-  const branch = await getDefaultBranch(supabase, projectId);
-  let scenes: Scene[] = [];
+  const forkCount: number = result.fork_count || 0;
+  const forkDepth: number | null = result.fork_depth ?? null;
 
-  if (branch) {
-    const edges = await getBranchEdges(supabase, branch.id);
-    const orderedSceneIds = buildSceneOrder(edges);
+  // Derive UI labels client-side (cheap string ops)
+  const forkCountLabel = forkCount > 0 ? (forkCount > 100 ? '100+' : String(forkCount)) : '';
 
-    if (orderedSceneIds.length > 0) {
-      const [{ data: scenesData }, { data: assetDurations }] = await Promise.all([
-        supabase
-          .from('scenes')
-          .select('*, profiles!contributor_id(username, reputation_score)')
-          .in('id', orderedSceneIds),
-        supabase
-          .from('media_assets')
-          .select('scene_id, duration')
-          .in('scene_id', orderedSceneIds)
-          .not('duration', 'is', null),
-      ]);
-
-      // Build duration map: scene_id → duration
-      const durationMap = new Map<string, number>();
-      (assetDurations || []).forEach((a: { scene_id: string; duration: number }) => {
-        if (a.scene_id && a.duration) durationMap.set(a.scene_id, a.duration);
-      });
-
-      const sceneMap = new Map((scenesData || []).map(s => [s.id, s]));
-      scenes = orderedSceneIds
-        .map(id => {
-          const scene = sceneMap.get(id);
-          if (!scene) return null;
-          return { ...scene, duration: durationMap.get(id) || null } as Scene;
-        })
-        .filter(Boolean) as Scene[];
-    }
-  }
-
-  // Load contributions
-  let contributionsQuery = supabase
-    .from('contributions')
-    .select('*, profiles!contributor_id(username, reputation_score)')
-    .eq('project_id', projectId)
-    .eq('status', 'pending');
-
-  if (!isDirector && userId) {
-    contributionsQuery = contributionsQuery.eq('contributor_id', userId);
-  }
-
-  const { data: contributionsData } = await contributionsQuery;
-  const contributions = (contributionsData as Contribution[]) || [];
-
-  // Load fork count
-  const { count } = await supabase
-    .from('projects')
-    .select('*', { count: 'exact', head: true })
-    .eq('forked_from_project_id', projectId);
-
-  // NEW: Fork depth (only for forks)
-  let forkDepth: number | null = null;
-  if (project.forked_from_project_id) {
-    forkDepth = await getForkDepth(supabase, projectId);
-  }
-
-  // NEW: Fork count label (capped query)
-  const forkCountLabel = await getForkCountLabelCapped(supabase, projectId);
-
-  // NEW: Fork point label
   let forkPointLabel: string | null = null;
   if (project.forked_at_scene_id && scenes.length > 0) {
     const forkScene = scenes.find(s => s.id === project.forked_at_scene_id);
@@ -142,17 +113,13 @@ export async function loadProjectData(
     }
   }
 
-  // NEW: Forked by label
-  let forkedByLabel: string | null = null;
-  if (project.forked_by && project.profiles) {
-    forkedByLabel = `@${project.profiles.username}`;
-  }
+  const forkedByLabel = project.forked_by && project.profiles
+    ? `@${project.profiles.username}`
+    : null;
 
-  // NEW: Forked at label
-  let forkedAtLabel: string | null = null;
-  if (project.created_at) {
-    forkedAtLabel = formatRelativeTime(project.created_at);
-  }
+  const forkedAtLabel = project.created_at
+    ? formatRelativeTime(project.created_at)
+    : null;
 
   return {
     project,
@@ -160,7 +127,7 @@ export async function loadProjectData(
     contributions,
     branch,
     forkedFrom,
-    forkCount: count || 0,
+    forkCount,
     forkDepth,
     forkCountLabel,
     forkPointLabel,

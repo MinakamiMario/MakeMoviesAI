@@ -7,7 +7,6 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
-import { createDefaultBranch, createDefaultCut } from '@/lib/graph';
 import { Tag } from '@/types';
 import styles from './page.module.css';
 
@@ -55,43 +54,21 @@ export default function NewProject() {
       return;
     }
 
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({
-        title,
-        description,
-        director_id: user.id,
-      })
-      .select()
-      .single();
+    // Atomic RPC: project + tags + branch + cut in one transaction
+    const { data: result, error: rpcError } = await supabase.rpc('create_project_atomic', {
+      p_title: title,
+      p_description: description || null,
+      p_tag_ids: selectedTagIds,
+    });
 
-    if (projectError || !project) {
-      setError(projectError?.message || 'Failed to create project');
+    if (rpcError || !result?.success) {
+      setError(result?.error || rpcError?.message || 'Failed to create project');
       setLoading(false);
       return;
     }
-
-    // Insert tags
-    if (selectedTagIds.length > 0) {
-      await supabase.from('project_tags').insert(
-        selectedTagIds.map((tagId) => ({
-          project_id: project.id,
-          tag_id: tagId,
-        }))
-      );
-    }
-
-    const branch = await createDefaultBranch(supabase, project.id, user.id);
-    if (!branch) {
-      setError('Failed to create project branch');
-      setLoading(false);
-      return;
-    }
-
-    await createDefaultCut(supabase, project.id, user.id);
 
     toast.success('Project created!');
-    router.push(`/projects/${project.id}`);
+    router.push(`/projects/${result.project_id}`);
   };
 
   return (
