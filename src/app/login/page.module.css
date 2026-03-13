@@ -101,6 +101,17 @@
   margin-bottom: var(--space-md);
 }
 
+.forgotLink {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  transition: color var(--transition-base);
+}
+
+.forgotLink:hover {
+  color: var(--accent);
+}
+
 .switch {
   margin-top: var(--space-lg);
   text-align: center;

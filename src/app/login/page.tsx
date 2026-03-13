@@ -65,6 +65,10 @@ function LoginForm() {
       <button type="submit" className={styles.submitBtn} disabled={loading}>
         {loading ? 'Signing in...' : 'Sign in'}
       </button>
+
+      <Link href="/forgot-password" className={styles.forgotLink}>
+        Forgot password?
+      </Link>
     </form>
   );
 }

@@ -1,14 +1,36 @@
 .footer {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   padding: var(--space-xl) var(--space-lg);
   margin-top: auto;
   border-top: 1px solid var(--border);
   font-size: var(--text-xs);
   color: var(--text-tertiary);
   letter-spacing: 1px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.link {
+  color: var(--text-tertiary);
+  transition: color var(--transition-fast);
+}
+
+.link:hover {
+  color: var(--text-secondary);
 }
 
 .brand {
