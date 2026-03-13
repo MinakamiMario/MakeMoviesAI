@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import InboxIcon from './InboxIcon';
+import NotificationBell from './NotificationBell';
 import styles from './Navbar.module.css';
 
 type Props = {
@@ -72,6 +73,7 @@ export default function Navbar({ showNav = true }: Props) {
                 <Link href="/dashboard" className={styles.navLink} onClick={() => setMenuOpen(false)}>
                   Dashboard
                 </Link>
+                <NotificationBell />
                 <InboxIcon />
                 {username && (
                   <Link href={`/users/${username}`} className={styles.navLink} onClick={() => setMenuOpen(false)}>

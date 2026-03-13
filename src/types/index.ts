@@ -9,6 +9,11 @@ export type {
   Scene,
   Contribution,
   ForkOrigin,
+  MediaAsset,
+  MediaAssetStatus,
+  ProcessingJob,
+  Notification,
+  NotificationType,
 } from './entities';
 
 // Graph/branching types

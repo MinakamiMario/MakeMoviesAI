@@ -13,6 +13,9 @@ import DecisionLog from '@/components/DecisionLog';
 import Comments from '@/components/Comments';
 import LineageTree from '@/components/LineageTree';
 import ContributionReview from '@/components/ContributionReview';
+import CreditsRoll from '@/components/CreditsRoll';
+import CinemaMode from '@/components/CinemaMode';
+import ProjectAnalytics from '@/components/ProjectAnalytics';
 import { Skeleton, SceneSkeleton } from '@/components/ui';
 import { useToast } from '@/components/ui/Toast';
 import { Scene, Contribution, ForkOrigin, BranchData, Project } from '@/types';
@@ -35,6 +38,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
+  const [cinemaOpen, setCinemaOpen] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const router = useRouter();
   const supabase = createClient();
@@ -43,6 +48,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     loadData();
   }, [params.id]);
+
+  // Track view on page load
+  useEffect(() => {
+    if (!loading && project) {
+      supabase.rpc('track_project_view', {
+        p_project_id: params.id,
+        p_viewer_id: user?.id || null,
+      }).then(() => {});
+    }
+  }, [loading, project?.id]);
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -122,6 +137,26 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     loadData();
   };
 
+  const handleExportRequest = async () => {
+    if (!user) {
+      toast.error('Sign in to export');
+      return;
+    }
+
+    setExportLoading(true);
+    const { data } = await supabase.rpc('request_project_export', {
+      p_project_id: params.id,
+      p_resolution: '720p',
+    });
+
+    if (data?.error) {
+      toast.error(data.error);
+    } else if (data?.success) {
+      toast.success('Export requested! We\'ll notify you when it\'s ready.');
+    }
+    setExportLoading(false);
+  };
+
   if (loading) {
     return (
       <main className={styles.main}>
@@ -145,6 +180,8 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
 
   if (!project) return null;
 
+  const hasPlayableScenes = scenes.some(s => s.media_url);
+
   return (
     <main className={styles.main}>
       <Navbar />
@@ -160,6 +197,39 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           forkedByLabel={forkedByLabel}
           forkedAtLabel={forkedAtLabel}
         />
+
+        {/* Action bar: Watch Film, Export, Compare */}
+        {scenes.length > 0 && (
+          <div className={styles.actionBar}>
+            {hasPlayableScenes && (
+              <button
+                className={styles.cinemaBtn}
+                onClick={() => setCinemaOpen(true)}
+              >
+                &#9654; Watch Film
+              </button>
+            )}
+
+            {user && hasPlayableScenes && (
+              <button
+                className={styles.exportBtn}
+                onClick={handleExportRequest}
+                disabled={exportLoading}
+              >
+                {exportLoading ? 'Requesting...' : '\u2B07 Export MP4'}
+              </button>
+            )}
+
+            {project.forked_from_project_id && (
+              <Link
+                href={`/projects/${project.forked_from_project_id}/compare/${params.id}`}
+                className={styles.compareLink}
+              >
+                Compare with original
+              </Link>
+            )}
+          </div>
+        )}
 
         <SceneTimeline
           scenes={scenes}
@@ -178,6 +248,16 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
         <LineageTree projectId={params.id} projectTitle={project.title} />
         <DecisionLog projectId={params.id} />
         <Comments projectId={params.id} />
+        <CreditsRoll
+          projectId={params.id}
+          projectTitle={project.title}
+          currentUserId={user?.id}
+        />
+
+        {/* Director-only analytics */}
+        {isDirector && (
+          <ProjectAnalytics projectId={params.id} />
+        )}
       </div>
 
       {selectedContribution && (
@@ -189,6 +269,20 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
           onFork={() => handleFork(selectedContribution)}
           onClose={() => setSelectedContribution(null)}
           isDirector={isDirector}
+        />
+      )}
+
+      {/* Cinema Mode overlay */}
+      {cinemaOpen && (
+        <CinemaMode
+          scenes={scenes.map(s => ({
+            id: s.id,
+            title: s.title,
+            media_url: s.media_url,
+            contributor_username: s.profiles?.username || null,
+          }))}
+          projectTitle={project.title}
+          onClose={() => setCinemaOpen(false)}
         />
       )}
     </main>

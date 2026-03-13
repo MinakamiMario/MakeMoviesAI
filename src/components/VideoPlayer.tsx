@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import type { MediaAssetStatus } from '@/types';
 import styles from './VideoPlayer.module.css';
 
 type PlaybackState = 'loading' | 'ready' | 'error' | 'processing';
@@ -19,6 +20,10 @@ type Props = {
   className?: string;
   /** Processing status message when src is null */
   processingMessage?: string;
+  /** Media asset DB status — overrides src-based state detection */
+  assetStatus?: MediaAssetStatus;
+  /** Error message from media_assets.error_message */
+  assetError?: string | null;
 };
 
 function isHlsUrl(url: string): boolean {
@@ -32,13 +37,31 @@ export default function VideoPlayer({
   controls = true,
   className,
   processingMessage = 'Video is being processed...',
+  assetStatus,
+  assetError,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
   const [state, setState] = useState<PlaybackState>(src ? 'loading' : 'processing');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // DB status override: if asset is explicitly failed/processing/uploaded, respect that
   useEffect(() => {
+    if (assetStatus === 'failed') {
+      setState('error');
+      setErrorMessage(assetError || 'Video processing failed.');
+    } else if (assetStatus === 'uploaded' || assetStatus === 'processing') {
+      setState('processing');
+    }
+    // 'ready' or undefined → let normal src-based logic handle it
+  }, [assetStatus, assetError]);
+
+  useEffect(() => {
+    // If DB says not ready, skip playback setup
+    if (assetStatus === 'failed' || assetStatus === 'uploaded' || assetStatus === 'processing') {
+      return;
+    }
+
     const video = videoRef.current;
     if (!video || !src) {
       setState(src ? 'loading' : 'processing');
@@ -103,7 +126,7 @@ export default function VideoPlayer({
         hlsRef.current = null;
       }
     };
-  }, [src]);
+  }, [src, assetStatus]);
 
   if (state === 'processing') {
     return (

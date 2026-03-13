@@ -45,12 +45,25 @@ export default function ContributionReview({
     if (e.target === e.currentTarget) onClose();
   };
 
-  const renderMedia = (url: string | null, alt: string) => {
+  const renderMedia = (
+    url: string | null,
+    alt: string,
+    assetStatus?: import('@/types').MediaAssetStatus | null,
+    assetError?: string | null,
+  ) => {
     if (!url) return <div className={styles.noMedia}>No media</div>;
 
     const isVideo = url.match(/\.(mp4|webm|mov|m3u8)$/i);
     if (isVideo) {
-      return <VideoPlayer src={url} alt={alt} className={styles.media} />;
+      return (
+        <VideoPlayer
+          src={url}
+          alt={alt}
+          className={styles.media}
+          assetStatus={assetStatus ?? undefined}
+          assetError={assetError}
+        />
+      );
     }
     return <img src={url} alt={alt} className={styles.media} />;
   };
@@ -95,7 +108,7 @@ export default function ContributionReview({
                 Parent Scene (Scene {displayOrder})
               </div>
               <div className={styles.sceneCard}>
-                {renderMedia(parentScene.media_url, parentScene.title)}
+                {renderMedia(parentScene.media_url, parentScene.title, parentScene.media_asset_status, parentScene.media_asset_error)}
                 <div className={styles.sceneInfo}>
                   <h3>{parentScene.title}</h3>
                   {parentScene.description && (
@@ -127,7 +140,7 @@ export default function ContributionReview({
               Proposed Contribution
             </div>
             <div className={styles.sceneCard}>
-              {renderMedia(contribution.media_url, contribution.title)}
+              {renderMedia(contribution.media_url, contribution.title, contribution.media_asset_status, contribution.media_asset_error)}
               <div className={styles.sceneInfo}>
                 <h3>{contribution.title}</h3>
                 {contribution.description && (

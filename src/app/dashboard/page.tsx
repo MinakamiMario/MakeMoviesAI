@@ -74,10 +74,18 @@ export default function Dashboard() {
           </div>
         ) : projects.length === 0 && page === 0 ? (
           <div className={styles.empty}>
-            <p>You haven&apos;t created any projects yet.</p>
-            <Link href="/projects/new">
-              <Button size="lg">Start your first film</Button>
-            </Link>
+            <p className={styles.emptyTitle}>Your filmmaking journey starts here</p>
+            <p className={styles.emptySubtitle}>
+              Create your own project or contribute scenes to someone else&apos;s film.
+            </p>
+            <div className={styles.emptyActions}>
+              <Link href="/projects/new">
+                <Button size="lg">Start your first film</Button>
+              </Link>
+              <Link href="/projects" className={styles.secondaryLink}>
+                Or explore and contribute &rarr;
+              </Link>
+            </div>
           </div>
         ) : (
           <>

@@ -45,6 +45,8 @@ export default function SceneTimeline({
                       <VideoPlayer
                         src={scene.media_url}
                         alt={scene.title}
+                        assetStatus={scene.media_asset_status ?? undefined}
+                        assetError={scene.media_asset_error}
                       />
                     ) : (
                       <img src={scene.media_url} alt={scene.title} />
