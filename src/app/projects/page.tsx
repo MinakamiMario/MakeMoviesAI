@@ -186,6 +186,27 @@ export default function Projects() {
           )}
         </div>
 
+        {/* Filter row — always visible */}
+        <div className={styles.filterRow}>
+          <button
+            className={`${styles.filterChip} ${!genesisOnly ? styles.filterChipActive : ''}`}
+            onClick={() => setGenesisOnly(false)}
+          >
+            All projects
+          </button>
+          <button
+            className={`${styles.filterChip} ${genesisOnly ? styles.filterChipActive : ''}`}
+            onClick={() => setGenesisOnly(true)}
+          >
+            Genesis only
+          </button>
+          {isSearchMode && (query || selectedTags.length > 0) && (
+            <button className={styles.clearBtn} onClick={clearFilters}>
+              Clear all
+            </button>
+          )}
+        </div>
+
         {/* Tag filter bar */}
         {tags.length > 0 && (
           <TagFilterBar
@@ -194,29 +215,6 @@ export default function Projects() {
             onToggle={toggleTag}
             onClear={() => setSelectedTags([])}
           />
-        )}
-
-        {/* Genesis toggle in search mode */}
-        {isSearchMode && (
-          <div className={styles.filterRow}>
-            <button
-              className={`${styles.filterChip} ${!genesisOnly ? styles.filterChipActive : ''}`}
-              onClick={() => setGenesisOnly(false)}
-            >
-              All projects
-            </button>
-            <button
-              className={`${styles.filterChip} ${genesisOnly ? styles.filterChipActive : ''}`}
-              onClick={() => setGenesisOnly(true)}
-            >
-              Genesis only
-            </button>
-            {(query || selectedTags.length > 0) && (
-              <button className={styles.clearBtn} onClick={clearFilters}>
-                Clear all
-              </button>
-            )}
-          </div>
         )}
 
         {/* ========= DISCOVERY MODE ========= */}
